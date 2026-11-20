@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // テスト用に、そのままブラウザで動かす偽の YouTube API
+    "e2e/fake-youtube.js",
+    "test-results/**",
+    "playwright-report/**",
   ]),
 ]);
 

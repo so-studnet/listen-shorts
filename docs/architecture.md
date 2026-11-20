@@ -1,6 +1,6 @@
 # ListenShorts 設計
 
-最終更新：2026-11-20（M0）。実装が変わったら更新する。
+最終更新：2026-11-20（M1）。実装が変わったら更新する。
 
 ## 1. 技術構成
 
@@ -10,7 +10,7 @@
 | 見た目 | Tailwind CSS 4 | |
 | 検証 | zod 4 | パックの検証と、保存データの読み込み |
 | 単体テスト | Vitest | `src/lib/domain/` の純粋関数 |
-| 画面のテスト | Playwright（M1 から） | スマホ幅で実際に操作して確かめる |
+| 画面のテスト | Playwright（`npm run e2e`） | スマホ幅（390×844、Chromium）で実際に操作して確かめる。YouTube の API は偽物に差し替える |
 | 動画 | YouTube IFrame Player API（スクリプトを読み込んで使う。npm のパッケージは使わない） | 公式の埋め込みのみ |
 | グラフ | ライブラリを使わず SVG で描く（M5） | 軽くするため |
 | 保存 | localStorage（M1〜）→ Supabase（M8〜） | |
@@ -26,7 +26,7 @@ src/
     page.tsx              フィード（クイズ・結果もこの中）
     review/page.tsx       復習
     stats/page.tsx        記録
-    settings/page.tsx     設定・パック管理
+    settings/page.tsx     設定・パック管理（M3。M1 は packs/page.tsx）
   components/             画面の部品（Player、ClozeQuestion、TabBar など）
   lib/
     domain/               純粋関数（画面にも保存先にも依存しない）とテスト
@@ -39,11 +39,14 @@ src/
       review.ts           復習の間隔、日付の区切り（午前4時）
       stats.ts            記録の集計（週・タグ・アクセント）
       quiz.ts             1本のクリップの進行（状態と遷移）
+      text.ts             文の語への分割、answer の位置、ヒント
+      records.ts          保存データ（AppData）の形と読み込み
+      catalog.ts          出題するクリップの並び
     store/                保存先（インターフェースと localStorage 実装、後で Supabase 実装）
     youtube/              IFrame Player API の読み込みと区間再生
   data/
     sample-pack.json      開発用のサンプルパック（架空の英文）
-e2e/                      Playwright のテスト
+e2e/                      Playwright のテスト（fake-youtube.js：テスト用の偽の IFrame API）
 docs/                     要件・設計・ロードマップ・パックの形式
 scripts/check.sh          コミット前のチェック一式
 ```
@@ -116,7 +119,7 @@ interface AppStore {
 
 - `src/lib/youtube/` で IFrame API のスクリプトを1回だけ読み込み、`YT.Player` を作る
 - `playerVars`：`playsinline: 1`、`cc_load_policy: 0`、`rel: 0`、`controls: 0`（区間の外に行かないように）、`disablekb: 1`
-- 区間の再生：`seekTo(start, true)` → `playVideo()` → 100ms ごとに `getCurrentTime()` を見て `end + PLAYBACK_TAIL_PADDING` を過ぎたら `pauseVideo()`
+- 区間の再生（`src/lib/youtube/use-segment-player.ts`）：`seekTo(start, true)` → `playVideo()` → 100ms ごとに `getCurrentTime()` を見て `end + PLAYBACK_TAIL_PADDING` を過ぎたら `pauseVideo()`。再生が始まった時点で位置が区間の外なら、もう一度 `seekTo` する（iPhone で最初の seekTo が効かない場合への備え。【未確認】実際に起きるか）
 - iPhone では最初の再生をユーザーのタップの中で呼ぶ必要がある。【未確認】2回目以降（聞き直し）はタップから呼ぶので問題ない見込み
 - 【未確認】ホーム画面に追加した PWA（standalone）の中でも埋め込みプレーヤーが再生できるか。M7 で確かめる
 - プレーヤーの `onError`（埋め込み禁止 101/150、削除 100 など）を受けて「再生できません」を出す

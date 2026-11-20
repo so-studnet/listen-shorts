@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "packId": "sample",
+  "title": "サンプル（架空の英文）",
+  "version": 1,
+  "clips": [
+    {
+      "clipId": "c001",
+      "videoId": "SAMPLE00001",
+      "start": 10.0,
+      "end": 40.0,
+      "title": "サンプル1：週末の出来事",
+      "channel": "Sample Channel",
+      "accent": "UK",
+      "difficulty": 2,
+      "sentences": [
+        { "sid": "s1", "start": 10.0, "end": 15.5, "text": "So last weekend we drove all the way to Arizona with my friend Erica.", "ja": "先週末、友だちのエリカと、アリゾナまではるばる車で行った。" },
+        { "sid": "s2", "start": 15.5, "end": 21.0, "text": "It was supposed to be a quick trip, but the car broke down twice.", "ja": "すぐ終わる旅のはずだったけど、車が2回も故障した。" },
+        { "sid": "s3", "start": 21.0, "end": 27.5, "text": "A guy at the gas station called a mechanic, and he showed up an hour later.", "ja": "ガソリンスタンドの人が整備士を呼んでくれて、整備士は1時間後に来た。" },
+        { "sid": "s4", "start": 27.5, "end": 34.0, "text": "Honestly, I think it was the best part of the whole trip.", "ja": "正直、あれが旅でいちばん楽しかったと思う。" }
+      ],
+      "items": [
+        { "itemId": "sample-c001-q1", "type": "cloze", "sid": "s1", "answer": "Arizona", "tags": ["l_r"], "note": "Arizona の r は舌を巻くので、日本語の「ラ」とは違って聞こえる" },
+        { "itemId": "sample-c001-q2", "type": "cloze", "sid": "s2", "answer": "It was", "tags": ["function_word", "linking"], "note": "It was はつながって「イッワズ」、was は弱形 /wəz/ になりやすい" },
+        { "itemId": "sample-c001-q3", "type": "cloze", "sid": "s3", "answer": "called a", "tags": ["final_consonant", "linking"], "note": "called の d と a がつながって「コールダ」。語末の d を落とすと code に聞こえる" },
+        { "itemId": "sample-c001-q4", "type": "cloze", "sid": "s4", "answer": "it was the", "accept": ["it's the"], "tags": ["function_word"], "note": "機能語が3つ続き、どれも弱く短くなる" }
+      ]
+    },
+    {
+      "clipId": "c002",
+      "videoId": "SAMPLE00002",
+      "start": 60.0,
+      "end": 85.0,
+      "title": "サンプル2：新しいカフェ",
+      "channel": "Sample Channel",
+      "accent": "US",
+      "difficulty": 3,
+      "sentences": [
+        { "sid": "s1", "start": 60.0, "end": 66.0, "text": "There's a new place down the road that just opened last week.", "ja": "先週、この先に新しい店ができた。" },
+        { "sid": "s2", "start": 66.0, "end": 72.5, "text": "The light in there is really nice, so I've been working from it.", "ja": "店内の光がとてもいいので、そこで仕事をしている。" },
+        { "sid": "s3", "start": 72.5, "end": 80.0, "text": "They were out of coffee by noon, which was kind of weird.", "ja": "昼には珈琲が売り切れていて、ちょっと変だった。" }
+      ],
+      "items": [
+        { "itemId": "sample-c002-q1", "type": "cloze", "sid": "s1", "answer": "There's a", "tags": ["function_word", "linking"], "note": "There's a は「ゼアザ」のようにつながる" },
+        { "itemId": "sample-c002-q2", "type": "choice", "sid": "s2", "answer": "light", "options": ["light", "right"], "tags": ["l_r"], "note": "light の l は舌先を上の歯ぐきにつける" },
+        { "itemId": "sample-c002-q3", "type": "order", "sid": "s2", "answer": "so I've been working", "tags": ["function_word", "linking"], "note": "I've been が「アイビン」と短くなる" },
+        { "itemId": "sample-c002-q4", "type": "cloze", "sid": "s3", "answer": "They were out of", "tags": ["function_word", "linking"], "note": "were は弱形 /wər/、out of は「アウダ」とつながる" }
+      ]
+    },
+    {
+      "clipId": "c003",
+      "videoId": "SAMPLE00003",
+      "start": 5.0,
+      "end": 30.0,
+      "title": "サンプル3：ニュースの話",
+      "channel": "Sample News",
+      "accent": "US",
+      "difficulty": 4,
+      "sentences": [
+        { "sid": "s1", "start": 5.0, "end": 12.0, "text": "Strange signs were reportedly spotted near the river on Tuesday.", "ja": "火曜日、川の近くで奇妙な看板が目撃されたという。" },
+        { "sid": "s2", "start": 12.0, "end": 19.0, "text": "Locals said they'd never seen anything like it before.", "ja": "地元の人は、こんなものは見たことがないと言った。" },
+        { "sid": "s3", "start": 19.0, "end": 26.0, "text": "Police have been asked to look into the code painted on them.", "ja": "警察は、看板に描かれた暗号を調べるよう求められている。" }
+      ],
+      "items": [
+        { "itemId": "sample-c003-q1", "type": "cloze", "sid": "s1", "answer": "signs were reportedly", "tags": ["linking", "function_word"], "note": "signs were が連結し、were がほとんど聞こえない" },
+        { "itemId": "sample-c003-q2", "type": "cloze", "sid": "s2", "answer": "they'd never", "accept": ["they had never", "they would never"], "tags": ["function_word"], "note": "they'd の d はほとんど聞こえない" },
+        { "itemId": "sample-c003-q3", "type": "choice", "sid": "s3", "answer": "code", "options": ["code", "coke", "called"], "tags": ["final_consonant"], "note": "語末の d は止めるだけで、はっきり発音されないことが多い" },
+        { "itemId": "sample-c003-q4", "type": "order", "sid": "s3", "answer": "have been asked to look", "tags": ["function_word", "linking"], "note": "have been が「アビン」、asked to が「アスタ」と短くなる" }
+      ]
+    }
+  ]
+}

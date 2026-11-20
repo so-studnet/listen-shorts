@@ -28,6 +28,7 @@
 
 ```bash
 npm run check   # テスト・lint・型チェック・本番ビルド
+npm run e2e     # Playwright（スマホ幅、偽の YouTube プレーヤー）
 ```
 
 画面を変えたら、Playwright でスマホ幅で操作し、スクリーンショットで確かめてから報告する。
