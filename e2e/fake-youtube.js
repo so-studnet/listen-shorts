@@ -18,6 +18,10 @@
     this.events = opts.events || {};
     setTimeout(function () {
       self.events.onReady && self.events.onReady({ target: self });
+      // 動画 ID が ERR で始まるときは、埋め込み禁止（150）を返す
+      if (String(opts.videoId).indexOf("ERR") === 0) {
+        self.events.onError && self.events.onError({ data: 150 });
+      }
     }, 50);
   }
   Player.prototype._now = function () {

@@ -113,7 +113,10 @@ export function ClipSession({ pack, clip, onAnswer, onFinish, onNext }: Props) {
       <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
         <div ref={containerRef} className="absolute inset-0" />
         {player.error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-4 text-center text-sm text-white">
+          <div
+            role="alert"
+            className="absolute inset-0 flex items-center justify-center bg-zinc-900 p-4 text-center text-sm text-white"
+          >
             {player.error}
           </div>
         )}
@@ -125,7 +128,7 @@ export function ClipSession({ pack, clip, onAnswer, onFinish, onNext }: Props) {
             字幕なしで1回聞きます。聞き終わったらクイズに進みます（
             {state.items.length} 問）。
           </p>
-          {!started && (
+          {!started && !player.error && (
             <button
               className={primary}
               onClick={playWhole}
@@ -139,7 +142,7 @@ export function ClipSession({ pack, clip, onAnswer, onFinish, onNext }: Props) {
           )}
           {(watched || started || player.error) && (
             <button
-              className={watched ? primary : secondary}
+              className={watched || player.error ? primary : secondary}
               onClick={startQuiz}
             >
               クイズへ進む

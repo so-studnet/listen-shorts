@@ -80,7 +80,8 @@ export function describePlayerError(code: number): string {
       return "動画が見つかりません（削除・非公開の可能性）";
     case 101:
     case 150:
-      return "この動画は埋め込みでの再生が許可されていません";
+      // 存在しない動画 ID でも 150 が返ることがある（iPhone の Safari で確認）
+      return "この動画は再生できません（埋め込みが許可されていないか、動画 ID が誤っています）";
     default:
       return `再生できません（エラー ${code}）`;
   }

@@ -142,3 +142,27 @@ test("動画が再生できないときは説明を出し、クイズへ進め�
   await page.getByRole("button", { name: "クイズへ進む" }).click();
   await expect(page.getByText("問題 1 / 4")).toBeVisible();
 });
+
+test("埋め込みできない動画は説明を出し、再生ボタンを隠す", async ({ page }) => {
+  await setup(page);
+  await page.goto("/packs");
+  const sample = JSON.parse(
+    readFileSync(path.join(__dirname, "../src/data/sample-pack.json"), "utf8"),
+  );
+  const p = structuredClone(sample);
+  p.packId = "err";
+  p.clips = [p.clips[0]];
+  p.clips[0].videoId = "ERRXXXXXXXX";
+  for (const item of p.clips[0].items) item.itemId = "err-" + item.itemId;
+  await page.getByLabel("パックの JSON").fill(JSON.stringify(p));
+  await page.getByRole("button", { name: "読み込む" }).click();
+  await page.getByRole("link", { name: "← クイズへ" }).click();
+
+  await expect(
+    page.getByRole("alert").filter({ hasText: "この動画は再生できません" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "▶ タップして再生" })).toHaveCount(0);
+  await shot(page, "07-embed-error");
+  await page.getByRole("button", { name: "クイズへ進む" }).click();
+  await expect(page.getByText("問題 1 / 4")).toBeVisible();
+});

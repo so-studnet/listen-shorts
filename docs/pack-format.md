@@ -6,6 +6,8 @@
 
 ## 例
 
+> この例の `videoId`（`XXXXXXXXXXX`）は仮のもので、YouTube に存在しない。そのまま読み込むと「この動画は再生できません」と出る。本物のパックでは実在する動画の ID を入れる。
+
 ```json
 {
   "schemaVersion": 1,
