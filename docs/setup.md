@@ -6,15 +6,21 @@ PC（Windows）にもスマホにも、何もインストールする必要は�
 
 ---
 
-## 1. GitHub：作業内容を `main` に取り込む（PR のマージ）
+## 1. GitHub：既定のブランチを `main` にする（最初の1回だけ）
 
-Vercel は `main` ブランチを「本番」として読み込みます。いまは `main` が空なので、Claude が作った PR（作業ブランチ → `main`）をマージします。
+Vercel は、リポジトリの既定のブランチを「本番」として読み込みます。最初に Claude の作業ブランチが push されたため、いまは作業ブランチが既定になっています。これを `main` に切り替えます（`main` は Claude が作成済み）。
 
-1. Claude が知らせた PR のリンク（`https://github.com/so-studnet/listen-shorts/pull/番号`）を開く
-2. 画面の下のほうにある緑のボタン **「Merge pull request」** を押す
-3. 続けて出る **「Confirm merge」** を押す
-4. 「Pull request successfully merged and closed」と出たら完了
-   - 横に **「Delete branch」** ボタンが出ますが、**押さないでください**（Claude が同じブランチで続きを作ります）
+1. PC のブラウザで https://github.com/so-studnet/listen-shorts を開く
+2. 上のタブの右端の **Settings**（歯車）を押す
+3. 左のメニューの **General** が開いた状態で、「Default branch」の欄を探す（少し下にスクロール）
+4. 枠の右にある **⇄**（左右の矢印のボタン）を押す
+5. 出てきた一覧で **main** を選び、**Update** を押す
+6. 確認の画面で **I understand, update the default branch.** を押す
+7. 「Default branch」の欄が `main` になっていれば完了
+
+### 以後の取り込み方（M2 以降）
+
+マイルストーンが終わったら、Claude が PR（作業ブランチ → `main`）を作ることがあります。そのときは、PR のリンクを開いて、下のほうの緑のボタン **Merge pull request** → **Confirm merge** を押します。横に出る **Delete branch** は押さないでください（Claude が同じブランチで続きを作ります）。
 
 ## 2. Vercel：プロジェクトを作る（最初の1回だけ）
 
@@ -24,7 +30,7 @@ Vercel は `main` ブランチを「本番」として読み込みます。い�
 4. 「Import Git Repository」の一覧で、**listen-shorts** の横の **Import** を押す
    - 一覧に出てこないとき：一覧の下の **Adjust GitHub App Permissions →** を押し、開いた GitHub の画面の「Repository access」で `listen-shorts` を選んで **Save** を押す。Vercel の画面に戻ると出てきます
 5. 「Configure Project」の画面で、次を確かめる（変えるところはありません）
-   - **Application Preset**：`Next.js`（`Other` になっていたら、手順1のマージが済んでいるか確かめてから、この画面を開き直す）
+   - **Application Preset**：`Next.js`（`Other` になっていたら、右の一覧から `Next.js` を選ぶ）
    - **Root Directory**：`./`
    - **Environment Variables**：何も入れない（M8 まで不要）
 6. **Deploy** を押す。1〜2分で紙吹雪の画面になれば成功
@@ -65,7 +71,7 @@ Vercel は `main` ブランチを「本番」として読み込みます。い�
 
 | 症状 | 見るところ |
 |---|---|
-| Vercel の Application Preset が `Other` になる | `main` にまだコードがない。手順1のマージを先に |
+| Vercel の Application Preset が `Other` になる | 手順1（既定のブランチを `main` に）が済んでいるか確かめる。済んでいれば一覧から `Next.js` を選ぶ |
 | Deploy が赤くなって失敗した | プロジェクトの **Deployments** → 失敗した行 → **Build Logs** の画面のスクリーンショットを Claude に見せる |
 | 「この動画は埋め込みでの再生が許可されていません」 | その動画は使えない。パックを作るチャットに別の動画にしてもらう |
 | 「動画が見つかりません」 | 動画 ID の誤りか、動画が削除・非公開。パックの `videoId` を確かめる |
