@@ -134,14 +134,39 @@ export function totalXp(data: AppData): number {
   return xp;
 }
 
-/** パックを追加する。同じ packId があれば置き換える。元の配列は変えない。 */
+/**
+ * パックを追加する。同じ packId があれば置き換える。元の配列は変えない。
+ * 置き換えたとき、新しい版にない問題は復習キューから外す。
+ */
 export function upsertPack(
   data: AppData,
   pack: StoredPack["pack"],
   importedAt: string,
 ): AppData {
   const others = data.packs.filter((p) => p.pack.packId !== pack.packId);
-  return { ...data, packs: [...others, { importedAt, pack }] };
+  const itemIds = new Set(
+    pack.clips.flatMap((c) => c.items.map((i) => i.itemId)),
+  );
+  return {
+    ...data,
+    packs: [...others, { importedAt, pack }],
+    review: data.review.filter(
+      (e) => e.packId !== pack.packId || itemIds.has(e.itemId),
+    ),
+  };
+}
+
+/** 読み込もうとしているパックが、すでにあるパックとどういう関係か。 */
+export function packUpdateKind(
+  data: Pick<AppData, "packs">,
+  pack: { packId: string; version: number },
+): { kind: "new" } | { kind: "upgrade" | "sameOrOlder"; oldVersion: number } {
+  const old = data.packs.find((p) => p.pack.packId === pack.packId);
+  if (!old) return { kind: "new" };
+  return {
+    kind: pack.version > old.pack.version ? "upgrade" : "sameOrOlder",
+    oldVersion: old.pack.version,
+  };
 }
 
 /** パックを削除する。そのパックの問題は復習キューからも外す（解答の記録は残す）。 */

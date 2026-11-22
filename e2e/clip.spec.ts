@@ -123,7 +123,7 @@ test("パックを貼り付けて読み込める。エラーは場所つきで�
   await page.getByLabel("パックの JSON").fill(JSON.stringify(broken, null, 2));
   await page.getByRole("button", { name: "読み込む" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "読み込めませんでした" })).toContainText(
-    'clips[0].items[0].answer：文の中に"Alizona" が見つかりません',
+    '文の中に"Alizona" が見つかりません',
   );
   await shot(page, "05-pack-error");
 
@@ -145,7 +145,7 @@ test("パックを貼り付けて読み込める。エラーは場所つきで�
 
   // 削除は2回押し
   await page.goto("/settings");
-  await page.getByRole("button", { name: "削除" }).click();
+  await page.getByRole("button", { name: "削除", exact: true }).click();
   await page.getByRole("button", { name: "本当に削除" }).click();
   await expect(page.getByText("まだありません。")).toBeVisible();
 });

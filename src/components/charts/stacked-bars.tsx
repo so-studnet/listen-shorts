@@ -37,7 +37,7 @@ export function StackedBars({ rows }: { rows: BarRow[] }) {
           key={r.label}
           type="button"
           className="flex min-h-12 w-full items-center gap-2 text-left"
-          onClick={() => setActive(active === i ? null : i)}
+          onClick={() => setActive(i)}
           onPointerEnter={(e) => e.pointerType === "mouse" && setActive(i)}
           onPointerLeave={(e) => e.pointerType === "mouse" && setActive(null)}
           aria-label={`${r.label}：${r.detail}`}

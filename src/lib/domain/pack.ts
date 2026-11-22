@@ -1,8 +1,9 @@
 /**
  * クリップパックのスキーマと検証。形式は docs/pack-format.md。
- * M1 はエラーの場所をパス（clips[0].items[1].answer）で示す。行番号は M6 で付ける。
+ * エラーの場所は、パス（clips[0].items[1].answer）と、JSON の文字列から読んだときは行番号で示す。
  */
 import { z } from "zod";
+import { lineForPath, locateJson, type PathSeg } from "./json-locate";
 import { findAnswerSpan, tokenize } from "./text";
 
 export const TAGS = [
@@ -99,7 +100,19 @@ const ANSWER_WORDS: Record<ItemType, [number, number]> = {
 /** クリップの長さ（秒）の範囲。 */
 const CLIP_SECONDS: [number, number] = [5, 90];
 
-export type PackIssue = { path: string; message: string };
+export type PackIssue = { path: string; message: string; line?: number };
+
+type Lines = ReadonlyMap<string, number> | undefined;
+
+const segs = (path: readonly PropertyKey[]): PathSeg[] =>
+  path.filter((p): p is string | number => typeof p !== "symbol");
+
+function issue(path: readonly PropertyKey[], message: string, lines: Lines): PackIssue {
+  const line = lines ? lineForPath(lines, segs(path)) : undefined;
+  return line === undefined
+    ? { path: formatPath(path), message }
+    : { path: formatPath(path), message, line };
+}
 
 export type PackResult =
   | { ok: true; pack: Pack; warnings: PackIssue[] }
@@ -116,11 +129,15 @@ export function formatPath(path: readonly PropertyKey[]): string {
 }
 
 /** 型の検査を通ったパックの、項目どうしの関係を確かめる。 */
-function checkRelations(pack: Pack, otherItemIds: ReadonlySet<string>) {
+function checkRelations(
+  pack: Pack,
+  otherItemIds: ReadonlySet<string>,
+  lines: Lines,
+) {
   const errors: PackIssue[] = [];
   const warnings: PackIssue[] = [];
   const err = (path: PropertyKey[], message: string) =>
-    errors.push({ path: formatPath(path), message });
+    errors.push(issue(path, message, lines));
 
   const clipIds = new Set<string>();
   const itemIds = new Set<string>();
@@ -158,10 +175,13 @@ function checkRelations(pack: Pack, otherItemIds: ReadonlySet<string>) {
         err([...ip, "itemId"], `itemId "${item.itemId}" が重複しています`);
       itemIds.add(item.itemId);
       if (otherItemIds.has(item.itemId))
-        warnings.push({
-          path: formatPath([...ip, "itemId"]),
-          message: `itemId "${item.itemId}" はほかのパックにもあります`,
-        });
+        warnings.push(
+          issue(
+            [...ip, "itemId"],
+            `itemId "${item.itemId}" はほかのパックにもあります`,
+            lines,
+          ),
+        );
 
       const s = sentences.get(item.sid);
       if (!s) {
@@ -209,10 +229,12 @@ function checkRelations(pack: Pack, otherItemIds: ReadonlySet<string>) {
 /**
  * パックの値（JSON.parse 済み）を検証する。
  * otherItemIds：すでに読み込んであるほかのパックの itemId（重複の警告に使う）。
+ * lines：JSON の文字列から読んだときの、パス → 行番号（エラーに行番号を付ける）。
  */
 export function validatePack(
   value: unknown,
   otherItemIds: ReadonlySet<string> = new Set(),
+  lines?: ReadonlyMap<string, number>,
 ): PackResult {
   const parsed = packSchema.safeParse(value, {
     error: z.locales.ja().localeError,
@@ -220,35 +242,31 @@ export function validatePack(
   if (!parsed.success) {
     return {
       ok: false,
-      errors: parsed.error.issues.map((i) => ({
-        path: formatPath(i.path),
-        message: i.message,
-      })),
+      errors: parsed.error.issues.map((i) => issue(i.path, i.message, lines)),
     };
   }
-  const { errors, warnings } = checkRelations(parsed.data, otherItemIds);
+  const { errors, warnings } = checkRelations(parsed.data, otherItemIds, lines);
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, pack: parsed.data, warnings };
 }
 
-/** JSON の文字列からパックを読む。JSON として読めなければその旨を返す。 */
+/** JSON の文字列からパックを読む。書き方の誤りも中身の誤りも、行番号を付けて返す。 */
 export function parsePackJson(
   json: string,
   otherItemIds?: ReadonlySet<string>,
 ): PackResult {
-  let value: unknown;
-  try {
-    value = JSON.parse(json);
-  } catch (e) {
+  const located = locateJson(json);
+  if (!located.ok) {
     return {
       ok: false,
       errors: [
         {
-          path: "(JSON)",
-          message: `JSON として読めません：${e instanceof Error ? e.message : String(e)}`,
+          path: "(JSON の書き方)",
+          message: `${located.message}（${located.column}文字目）`,
+          line: located.line,
         },
       ],
     };
   }
-  return validatePack(value, otherItemIds);
+  return validatePack(located.value, otherItemIds, located.lines);
 }

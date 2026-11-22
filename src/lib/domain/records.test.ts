@@ -4,6 +4,7 @@ import { validatePack, type Pack } from "./pack";
 import {
   EMPTY_DATA,
   loadAppData,
+  packUpdateKind,
   removePack,
   totalXp,
   upsertPack,
@@ -89,5 +90,34 @@ describe("upsertPack / removePack", () => {
     });
     expect(d.review).toHaveLength(2);
     expect(removePack(d, "sample").review.map((e) => e.packId)).toEqual(["keep"]);
+  });
+});
+
+describe("パックの置き換え", () => {
+  it("新規・新しい版・同じか古い版", () => {
+    const d = upsertPack(EMPTY_DATA, pack, "t");
+    expect(packUpdateKind(EMPTY_DATA, pack)).toEqual({ kind: "new" });
+    expect(packUpdateKind(d, { packId: "sample", version: 2 })).toEqual({ kind: "upgrade", oldVersion: 1 });
+    expect(packUpdateKind(d, { packId: "sample", version: 1 })).toEqual({ kind: "sameOrOlder", oldVersion: 1 });
+  });
+  it("新しい版で消えた問題は復習から外す（ほかのパックはそのまま）", () => {
+    const entry = { clipId: "c001", stage: 0, dueAt: "t", lastAnsweredAt: "t" };
+    const d = {
+      ...upsertPack(EMPTY_DATA, pack, "t"),
+      review: [
+        { ...entry, packId: "sample", itemId: "sample-c001-q1" },
+        { ...entry, packId: "sample", itemId: "sample-c001-q2" },
+        { ...entry, packId: "other", itemId: "sample-c001-q2" },
+      ],
+    };
+    const v2 = {
+      ...pack,
+      version: 2,
+      clips: [{ ...pack.clips[0], items: [pack.clips[0].items[0]] }],
+    };
+    expect(upsertPack(d, v2, "t2").review.map((e) => `${e.packId}/${e.itemId}`)).toEqual([
+      "sample/sample-c001-q1",
+      "other/sample-c001-q2",
+    ]);
   });
 });

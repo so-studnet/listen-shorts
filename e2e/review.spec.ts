@@ -126,7 +126,7 @@ test("パックを削除すると、その問題は復習から外れる", async
   await page.getByRole("button", { name: "次の問題" }).click();
   // クイズ中はタブを移れる（スワイプだけ止めている）。設定で削除
   await page.getByRole("link", { name: /設定/ }).click();
-  await page.getByRole("button", { name: "削除" }).click();
+  await page.getByRole("button", { name: "削除", exact: true }).click();
   await page.getByRole("button", { name: "本当に削除" }).click();
   expect((await saved(page)).review).toHaveLength(0);
 });

@@ -84,9 +84,33 @@ describe("validatePack", () => {
 });
 
 describe("parsePackJson / formatPath", () => {
-  it("JSON として読めなければエラー", () => {
-    const r = parsePackJson("{ 'a': 1 }");
-    expect(!r.ok && r.errors[0].path).toBe("(JSON)");
+  it("JSON の書き方の誤りは、行番号と説明を返す", () => {
+    const r = parsePackJson('{\n  "packId": "p"\n  "title": "t"\n}');
+    expect(r.ok).toBe(false);
+    if (!r.ok)
+      expect(r.errors[0]).toMatchObject({ path: "(JSON の書き方)", line: 3 });
+  });
+  it("中身の誤りにも行番号が付く（足りない項目は親の行）", () => {
+    const p = clone(sample) as Record<string, unknown> & typeof sample;
+    p.clips[0].items[0].answer = "Alizona";
+    delete (p as Record<string, unknown>).title;
+    const text = JSON.stringify(p, null, 2);
+    const r = parsePackJson(text);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    const lines = text.split("\n");
+    const title = r.errors.find((e) => e.path === "title")!;
+    expect(title.line).toBe(1);
+    const answer = r.errors.find((e) => e.path === "clips[0].items[0].answer");
+    // 型の誤り（title）があると関係の検査はしないので、title だけ
+    expect(answer).toBeUndefined();
+    p.title = "t";
+    const r2 = parsePackJson(JSON.stringify(p, null, 2));
+    if (r2.ok) throw new Error();
+    const a2 = r2.errors[0];
+    expect(a2.path).toBe("clips[0].items[0].answer");
+    expect(JSON.stringify(p, null, 2).split("\n")[a2.line! - 1]).toContain('"answer": "Alizona"');
+    expect(lines.length).toBeGreaterThan(10);
   });
   it("パスを整形する", () => {
     expect(formatPath(["clips", 0, "items", 1, "answer"])).toBe(
