@@ -32,7 +32,10 @@ export const clipResultSchema = z.object({
   source: z.enum(["feed", "retry"]),
   total: z.number(),
   correct: z.number(),
+  /** 合計（問題の得点 + ライフの得点） */
   points: z.number(),
+  /** 残りライフの得点（M1 の記録にはないので 0） */
+  lifeBonus: z.number().default(0),
   livesLeft: z.number(),
   maxCombo: z.number(),
 });
@@ -44,16 +47,24 @@ export const storedPackSchema = z.object({
 });
 export type StoredPack = z.infer<typeof storedPackSchema>;
 
+export const progressSchema = z.object({
+  /** いまの連続正解数（クリップをまたいで続く） */
+  combo: z.number().int().min(0),
+});
+export type Progress = z.infer<typeof progressSchema>;
+
 export type AppData = {
   packs: StoredPack[];
   answers: AnswerLog[];
   clipResults: ClipResult[];
+  progress: Progress;
 };
 
 export const EMPTY_DATA: AppData = Object.freeze({
   packs: [],
   answers: [],
   clipResults: [],
+  progress: { combo: 0 },
 }) as AppData;
 
 /** 配列の要素を1つずつ検査し、壊れた要素だけ捨てる。 */
@@ -75,7 +86,16 @@ export function loadAppData(raw: unknown): AppData {
     packs: keepValid(storedPackSchema, r.packs),
     answers: keepValid(answerLogSchema, r.answers),
     clipResults: keepValid(clipResultSchema, r.clipResults),
+    progress: progressSchema.safeParse(r.progress).data ?? { combo: 0 },
   };
+}
+
+/** XP の合計。解答の得点と、クリップの終わりのライフの得点を足す。 */
+export function totalXp(data: AppData): number {
+  let xp = 0;
+  for (const a of data.answers) xp += a.points;
+  for (const c of data.clipResults) xp += c.lifeBonus;
+  return xp;
 }
 
 /** パックを追加する。同じ packId があれば置き換える。元の配列は変えない。 */

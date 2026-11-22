@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import sample from "@/data/sample-pack.json";
 import { validatePack, type Pack } from "./pack";
-import { EMPTY_DATA, loadAppData, removePack, upsertPack } from "./records";
+import {
+  EMPTY_DATA,
+  loadAppData,
+  removePack,
+  totalXp,
+  upsertPack,
+} from "./records";
 
 const pack = (validatePack(sample) as { ok: true; pack: Pack }).pack;
 
@@ -38,6 +44,29 @@ describe("loadAppData", () => {
     expect(d.answers).toEqual([log]);
     expect(d.packs.length).toBe(1);
     expect(d.clipResults).toEqual([]);
+    expect(d.progress).toEqual({ combo: 0 });
+  });
+  it("M1 のクリップ結果（lifeBonus なし）は 0 として読む", () => {
+    const d = loadAppData({
+      clipResults: [
+        { id: "r", finishedAt: "t", packId: "p", clipId: "c", source: "feed", total: 1, correct: 1, points: 100, livesLeft: 0, maxCombo: 0 },
+      ],
+      progress: { combo: 3 },
+    });
+    expect(d.clipResults[0].lifeBonus).toBe(0);
+    expect(d.progress.combo).toBe(3);
+  });
+});
+
+describe("totalXp", () => {
+  it("解答の得点とライフの得点の合計", () => {
+    const d = loadAppData({
+      answers: [log, { ...log, id: "a2", points: 50 }],
+      clipResults: [
+        { id: "r", finishedAt: "t", packId: "p", clipId: "c", source: "feed", total: 2, correct: 1, points: 240, lifeBonus: 90, livesLeft: 3, maxCombo: 1 },
+      ],
+    });
+    expect(totalXp(d)).toBe(240);
   });
 });
 

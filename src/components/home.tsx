@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { buildCatalog } from "@/lib/domain/catalog";
+import { buildCatalog, type CatalogEntry } from "@/lib/domain/catalog";
 import type { Item } from "@/lib/domain/pack";
-import { summarize, type QuestionResult } from "@/lib/domain/quiz";
+import type { QuestionResult, QuizSummary } from "@/lib/domain/quiz";
+import { totalXp } from "@/lib/domain/records";
 import { newId } from "@/lib/id";
 import { SAMPLE_PACK } from "@/lib/sample";
 import { getStore, useAppData } from "@/lib/store/use-app-data";
 import { useHydrated } from "@/lib/use-hydrated";
 import { ClipSession } from "./clip-session";
-import type { CatalogEntry } from "@/lib/domain/catalog";
 
 export function Home() {
   const data = useAppData();
@@ -34,14 +34,12 @@ export function Home() {
     window.scrollTo({ top: 0 });
   };
 
-  const totalPoints = data.answers.reduce((sum, a) => sum + a.points, 0);
-
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <nav className="flex items-center justify-between">
         <h1 className="text-lg font-bold">ListenShorts</h1>
         <div className="flex items-center gap-3 text-sm">
-          <span data-testid="total-points">{totalPoints} XP</span>
+          <span data-testid="total-points">{totalXp(data)} XP</span>
           <Link
             href="/packs"
             className="flex h-12 items-center rounded-xl border border-zinc-300 px-3 dark:border-zinc-600"
@@ -53,36 +51,40 @@ export function Home() {
       {!hydrated ? (
         <p className="text-sm">読み込み中…</p>
       ) : (
-      <SessionHost
-        key={`${entry.key}#${session}`}
-        entry={entry}
-        played={played}
-        position={`${(index % catalog.length) + 1} / ${catalog.length}`}
-        onNext={onNext}
-      />
+        <SessionHost
+          key={`${entry.key}#${session}`}
+          entry={entry}
+          played={played}
+          combo={data.progress.combo}
+          position={`${(index % catalog.length) + 1} / ${catalog.length}`}
+          onNext={onNext}
+        />
       )}
     </main>
   );
 }
 
-/** 1本のクリップの間だけ生きる。初回か再挑戦かは開いたときに決める。 */
+/** 1本のクリップの間だけ生きる。初回か再挑戦か、開始時のコンボは開いたときに決める。 */
 function SessionHost({
   entry,
   played,
+  combo,
   position,
   onNext,
 }: {
   entry: CatalogEntry;
   played: boolean;
+  combo: number;
   position: string;
   onNext: () => void;
 }) {
   const [source] = useState<"feed" | "retry">(played ? "retry" : "feed");
-
+  const [initialCombo] = useState(combo);
 
   const onAnswer = (item: Item, r: QuestionResult) => {
     getStore().update((d) => ({
       ...d,
+      progress: { ...d.progress, combo: r.comboAfter },
       answers: [
         ...d.answers,
         {
@@ -100,15 +102,14 @@ function SessionHost({
           verdict: r.verdict,
           replays: r.replays,
           elapsedMs: r.elapsedMs,
-          hintUsed: false,
+          hintUsed: r.hintUsed,
           points: r.points,
         },
       ],
     }));
   };
 
-  const onFinish = (results: QuestionResult[]) => {
-    const s = summarize(results);
+  const onFinish = (s: QuizSummary) => {
     getStore().update((d) => ({
       ...d,
       clipResults: [
@@ -122,8 +123,9 @@ function SessionHost({
           total: s.total,
           correct: s.correct,
           points: s.points,
-          livesLeft: 0,
-          maxCombo: 0,
+          lifeBonus: s.lifeBonus,
+          livesLeft: s.livesLeft,
+          maxCombo: s.maxCombo,
         },
       ],
     }));
@@ -133,11 +135,13 @@ function SessionHost({
     <>
       <p className="text-xs text-zinc-600 dark:text-zinc-400">
         クリップ {position}
-        {source === "retry" && "・再挑戦"}
+        {source === "retry" && "・再挑戦（XP 半分）"}
       </p>
       <ClipSession
         pack={entry.pack}
         clip={entry.clip}
+        initialCombo={initialCombo}
+        retry={source === "retry"}
         onAnswer={onAnswer}
         onFinish={onFinish}
         onNext={onNext}

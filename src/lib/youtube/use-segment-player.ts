@@ -21,23 +21,30 @@ export type SegmentPlayer = {
   stop: () => void;
 };
 
+export type SegmentPlayerEvents = {
+  /** 区間の終わりまで再生して止まったとき */
+  onSegmentEnd?: () => void;
+  /** 理由を問わず再生が止まったとき（区間の終わり・stop・エラー） */
+  onStop?: () => void;
+};
+
 export function useSegmentPlayer(
   containerRef: React.RefObject<HTMLDivElement | null>,
   videoId: string,
   initialStart: number,
-  onSegmentEnd?: () => void,
+  events: SegmentPlayerEvents = {},
 ): SegmentPlayer {
   const playerRef = useRef<YTPlayer | null>(null);
   const segmentRef = useRef<{ start: number; end: number } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const onEndRef = useRef(onSegmentEnd);
+  const eventsRef = useRef(events);
   const [ready, setReady] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    onEndRef.current = onSegmentEnd;
-  }, [onSegmentEnd]);
+    eventsRef.current = events;
+  });
 
   const clearTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -46,6 +53,7 @@ export function useSegmentPlayer(
 
   const finish = useCallback((notify: boolean) => {
     clearTimer();
+    const wasPlaying = segmentRef.current !== null;
     segmentRef.current = null;
     try {
       playerRef.current?.pauseVideo();
@@ -53,7 +61,8 @@ export function useSegmentPlayer(
       // プレーヤーが壊れていても止める操作は失敗してよい
     }
     setPlaying(false);
-    if (notify) onEndRef.current?.();
+    if (wasPlaying) eventsRef.current.onStop?.();
+    if (notify) eventsRef.current.onSegmentEnd?.();
   }, []);
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 # ListenShorts 設計
 
-最終更新：2026-11-20（M1）。実装が変わったら更新する。
+最終更新：2026-11-22（M2）。実装が変わったら更新する。
 
 ## 1. 技術構成
 
@@ -34,6 +34,7 @@ src/
       answer.ts           解答の正規化と判定
       pack.ts             パックのスキーマ（zod）と検証、行番号の付与
       scoring.ts          得点・コンボ・スピードボーナス・ライフの換算
+      shuffle.ts          種つきの乱数とシャッフル（選択肢・カード）
       level.ts            レベル曲線と称号
       badges.ts           バッジの定義（データ）と判定
       review.ts           復習の間隔、日付の区切り（午前4時）
@@ -63,11 +64,10 @@ scripts/check.sh          コミット前のチェック一式
 type AppData = {
   packs: StoredPack[];          // 読み込んだパック（読み込んだ日時つき）
   answers: AnswerLog[];         // 解答1回ごとの記録（requirements F8）
-  clipResults: ClipResult[];    // クリップ1本ごとの結果
+  clipResults: ClipResult[];    // クリップ1本ごとの結果（lifeBonus を含む）
   progress: {
-    xp: number;                 // XP の合計
-    combo: number;              // いまの連続正解数
-    badges: { id: string; earnedAt: string }[];
+    combo: number;              // いまの連続正解数（M2）
+    // xp・badges は M3 で足す。XP は answers.points と clipResults.lifeBonus の合計から計算する
   };
   review: ReviewEntry[];        // 復習キュー
   feedFilter: FeedFilter;       // フィードの絞り込み
@@ -100,7 +100,7 @@ type ReviewEntry = {
 
 ### クイズの進行は状態遷移で表す
 
-`quiz.ts` に、1本のクリップの状態（`watching`→`question`→`feedback`→…→`result`）と、操作（`answer`、`replaySentence`、`useHint` など）を受けて次の状態を返す関数を置く。画面は `useReducer` でこれを使う。ライフの消費・コンボ・得点の計算はここで行う。
+`quiz.ts` に、1本のクリップの状態（`watching`→`question`→`feedback`→…→`result`）と、操作（`startQuiz`・`replaySentence`・`replayWhole`・`playbackEnded`・`useHint`・`submit`・`next`）を受けて次の状態を返す関数を置く。画面は `useReducer` でこれを使う。ライフの消費・コンボ・得点の計算はここで行う。現在時刻と乱数の種は操作に含めて渡す。聞き直しの再生中の時間は `pausedMs` に積み、スピードボーナスの経過時間から除く（プレーヤーが止まったら `playbackEnded`）。
 
 ### 保存先はインターフェースの裏に隠す
 
