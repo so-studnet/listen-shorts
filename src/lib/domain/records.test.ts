@@ -82,4 +82,12 @@ describe("upsertPack / removePack", () => {
     ]);
     expect(removePack(b, "sample").packs).toEqual([]);
   });
+  it("パックを消すと、そのパックの復習も外す", () => {
+    const entry = { clipId: "c", itemId: "i", stage: 0, dueAt: "t", lastAnsweredAt: "t" };
+    const d = loadAppData({
+      review: [{ ...entry, packId: "sample" }, { ...entry, packId: "keep" }, { bad: 1 }],
+    });
+    expect(d.review).toHaveLength(2);
+    expect(removePack(d, "sample").review.map((e) => e.packId)).toEqual(["keep"]);
+  });
 });

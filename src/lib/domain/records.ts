@@ -3,6 +3,7 @@
  */
 import { z } from "zod";
 import { ACCENTS, ITEM_TYPES, TAGS, packSchema } from "./pack";
+import { removePackFromQueue, type ReviewEntry } from "./review";
 
 export const answerLogSchema = z.object({
   id: z.string(),
@@ -69,12 +70,23 @@ export const feedFilterSchema = z.object({
 export type FeedFilter = z.infer<typeof feedFilterSchema>;
 export const NO_FILTER: FeedFilter = { packId: null, accent: null, difficulty: null };
 
+export const reviewEntrySchema: z.ZodType<ReviewEntry> = z.object({
+  packId: z.string(),
+  clipId: z.string(),
+  itemId: z.string(),
+  stage: z.number().int().min(0),
+  dueAt: z.string(),
+  lastAnsweredAt: z.string(),
+});
+
 export type AppData = {
   packs: StoredPack[];
   answers: AnswerLog[];
   clipResults: ClipResult[];
   progress: Progress;
   feedFilter: FeedFilter;
+  /** 復習キュー */
+  review: ReviewEntry[];
 };
 
 export const EMPTY_DATA: AppData = Object.freeze({
@@ -83,6 +95,7 @@ export const EMPTY_DATA: AppData = Object.freeze({
   clipResults: [],
   progress: { combo: 0, badges: [] },
   feedFilter: NO_FILTER,
+  review: [],
 }) as AppData;
 
 /** 配列の要素を1つずつ検査し、壊れた要素だけ捨てる。 */
@@ -109,6 +122,7 @@ export function loadAppData(raw: unknown): AppData {
       badges: [],
     },
     feedFilter: feedFilterSchema.safeParse(r.feedFilter).data ?? NO_FILTER,
+    review: keepValid(reviewEntrySchema, r.review),
   };
 }
 
@@ -130,9 +144,11 @@ export function upsertPack(
   return { ...data, packs: [...others, { importedAt, pack }] };
 }
 
+/** パックを削除する。そのパックの問題は復習キューからも外す（解答の記録は残す）。 */
 export function removePack(data: AppData, packId: string): AppData {
   return {
     ...data,
     packs: data.packs.filter((p) => p.pack.packId !== packId),
+    review: removePackFromQueue(data.review, packId),
   };
 }

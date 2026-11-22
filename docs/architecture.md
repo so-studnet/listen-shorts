@@ -1,6 +1,6 @@
 # ListenShorts 設計
 
-最終更新：2026-11-22（M3）。実装が変わったら更新する。
+最終更新：2026-11-22（M4）。実装が変わったら更新する。
 
 ## 1. 技術構成
 
@@ -30,6 +30,7 @@ src/
   components/             画面の部品
     home.tsx              フィード（縦スワイプ・絞り込み・1本ごとの保存とご褒美の計算）
     clip-session.tsx      1本のクリップ（視聴・クイズ・結果）
+    review-view.tsx       復習（今日の件数、1問ずつ、まとめ）
     answer-inputs.tsx     穴埋め・聞き分け・並べ替えの解答欄
     tab-bar.tsx           下部のタブバー（layout.tsx に置く）
   lib/
@@ -41,7 +42,7 @@ src/
       shuffle.ts          種つきの乱数とシャッフル（選択肢・カード）
       level.ts            レベル曲線と称号
       badges.ts           バッジの定義（データ）と判定
-      review.ts           復習の間隔、日付の区切り（午前4時）
+      review.ts           復習キュー（段と期日）、日付の区切り（午前4時）、復習の得点
       stats.ts            記録の集計（週・タグ・アクセント）
       quiz.ts             1本のクリップの進行（状態と遷移）
       text.ts             文の語への分割、answer の位置、ヒント
@@ -81,7 +82,7 @@ type ReviewEntry = {
   itemId: string;
   packId: string;
   clipId: string;
-  stage: number;                // 0..4（1日・3日・7日・14日・30日）
+  stage: number;                // 0..4（1日・3日・7日・14日・30日）。packId + itemId で1件
   dueAt: string;                // 次に出す日時（午前4時の区切りに合わせる、UTC の ISO 文字列）
   lastAnsweredAt: string;
 };
@@ -139,6 +140,12 @@ interface AppStore {
 - 縦の scroll-snap。スライド1枚 = 画面の高さ。スクロール位置から表示中の番号を出し、その1枚だけに `ClipSession`（YouTube のプレーヤー）を作る
 - クイズ中は外側のスクロールを `overflow: hidden` にして止める（`ClipSession` の `onLockChange`）
 - 1回のクリップには `sessionId` を振り、解答記録とクリップの結果に入れる（バッジの判定で「1本の中で」を数えるため）
+
+### 日付と時刻
+
+- 日付の区切り（午前4時）は端末のタイムゾーンで計算する（`logicalDayStart`）。保存は UTC の ISO 文字列
+- 単体テストは `vitest.config.mts` で `TZ=Asia/Tokyo` に固定する。画面のテストは Playwright の `timezoneId: Asia/Tokyo` と `page.clock.setFixedTime` で日をまたがせる
+- Next.js 16 では、事前描画（ビルド時）に `new Date()` を呼ぶとビルドが失敗する。時刻を使う部品は、ブラウザで描画したあと（`useHydrated` が true）にだけ描く
 
 ### 集計はアプリ側で
 

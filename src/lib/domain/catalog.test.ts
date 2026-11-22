@@ -4,6 +4,7 @@ import {
   buildCatalog,
   buildFeed,
   playedKeys,
+  resolveItem,
   type FeedFilterInput,
 } from "./catalog";
 import { validatePack, type Pack } from "./pack";
@@ -55,5 +56,19 @@ describe("buildFeed", () => {
     expect(keys({ difficulty: 4 })).toEqual(["sample/c003"]);
     expect(keys({ packId: "other" })).toEqual([]);
     expect(keys({ packId: "sample", accent: "UK" })).toEqual(["sample/c001"]);
+  });
+});
+
+describe("resolveItem", () => {
+  const catalog = buildCatalog([], s);
+  it("問題とクリップ・文を探す", () => {
+    const r = resolveItem(catalog, { packId: "sample", itemId: "sample-c002-q2" });
+    expect(r?.entry.clip.clipId).toBe("c002");
+    expect(r?.item.type).toBe("choice");
+    expect(r?.sentence.sid).toBe("s2");
+  });
+  it("なければ null", () => {
+    expect(resolveItem(catalog, { packId: "gone", itemId: "sample-c002-q2" })).toBeNull();
+    expect(resolveItem(catalog, { packId: "sample", itemId: "nope" })).toBeNull();
   });
 });

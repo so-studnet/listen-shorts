@@ -63,3 +63,19 @@ export function buildFeed(
     ...hit.filter((e) => played.has(e.key)),
   ];
 }
+
+/** 復習などで、packId と itemId から問題と、そのクリップ・文を探す。見つからなければ null。 */
+export function resolveItem(
+  catalog: readonly CatalogEntry[],
+  ref: { packId: string; itemId: string },
+): { entry: CatalogEntry; item: Clip["items"][number]; sentence: Sentence } | null {
+  for (const entry of catalog) {
+    if (entry.pack.packId !== ref.packId) continue;
+    const item = entry.clip.items.find((i) => i.itemId === ref.itemId);
+    if (!item) continue;
+    const sentence = entry.clip.sentences.find((s) => s.sid === item.sid);
+    if (!sentence) return null;
+    return { entry, item, sentence };
+  }
+  return null;
+}

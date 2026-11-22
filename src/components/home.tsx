@@ -6,6 +6,7 @@
  */
 import { useMemo, useRef, useState } from "react";
 import { newBadges } from "@/lib/domain/badges";
+import { applyAnswer } from "@/lib/domain/review";
 import {
   buildCatalog,
   buildFeed,
@@ -281,15 +282,27 @@ function SessionHost({
   const [rewards, setRewards] = useState<Rewards | null>(null);
 
   const onAnswer = (item: Item, r: QuestionResult) => {
+    const now = new Date();
     getStore().update((d) => ({
       ...d,
       progress: { ...d.progress, combo: r.comboAfter },
+      review: applyAnswer(
+        d.review,
+        {
+          packId: entry.pack.packId,
+          clipId: entry.clip.clipId,
+          itemId: item.itemId,
+        },
+        r.verdict,
+        source,
+        now,
+      ),
       answers: [
         ...d.answers,
         {
           id: newId(),
           sessionId,
-          answeredAt: new Date().toISOString(),
+          answeredAt: now.toISOString(),
           source,
           packId: entry.pack.packId,
           clipId: entry.clip.clipId,
