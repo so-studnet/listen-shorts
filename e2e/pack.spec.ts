@@ -60,7 +60,7 @@ test("JSON の書き方の誤り（カンマ抜け）は行と説明を出す", 
   const at = lines.findIndex((l) => l.includes('"title": "自分のパック"'));
   lines[at] = lines[at].replace(/,$/, ""); // 行末のカンマを消す
   await page.getByLabel("パックの JSON").fill(lines.join("\n"));
-  await page.getByRole("button", { name: "読み込む" }).click();
+  await page.getByRole("button", { name: "読み込む", exact: true }).click();
   const alert = page.getByRole("alert").filter({ hasText: "読み込めませんでした" });
   await expect(alert).toContainText(`${at + 2}行目`);
   await expect(alert).toContainText("前の行の終わりにカンマが抜けていませんか");
@@ -72,7 +72,7 @@ test("同じ版は確認してから置き換える。新しい版はそのま�
   const box = page.getByLabel("パックの JSON");
   const load = async (p: unknown) => {
     await box.fill(JSON.stringify(p));
-    await page.getByRole("button", { name: "読み込む" }).click();
+    await page.getByRole("button", { name: "読み込む", exact: true }).click();
   };
   await load(myPack(1));
   await expect(page.getByRole("status")).toContainText("読み込みました");
@@ -113,7 +113,7 @@ test("同じ版は確認してから置き換える。新しい版はそのま�
 test("データを書き出せる。すべて削除は2回押し", async ({ page }) => {
   await page.goto("/settings");
   await page.getByLabel("パックの JSON").fill(JSON.stringify(myPack()));
-  await page.getByRole("button", { name: "読み込む" }).click();
+  await page.getByRole("button", { name: "読み込む", exact: true }).click();
   await expect(page.getByTestId("data-size")).toContainText("パック 1 個");
 
   const [download] = await Promise.all([

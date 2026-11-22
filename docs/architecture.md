@@ -1,6 +1,6 @@
 # ListenShorts 設計
 
-最終更新：2026-11-22（M6）。実装が変わったら更新する。
+最終更新：2026-11-22（M7）。実装が変わったら更新する。
 
 ## 1. 技術構成
 
@@ -142,6 +142,13 @@ interface AppStore {
 - 縦の scroll-snap。スライド1枚 = 画面の高さ。スクロール位置から表示中の番号を出し、その1枚だけに `ClipSession`（YouTube のプレーヤー）を作る
 - クイズ中は外側のスクロールを `overflow: hidden` にして止める（`ClipSession` の `onLockChange`）
 - 1回のクリップには `sessionId` を振り、解答記録とクリップの結果に入れる（バッジの判定で「1本の中で」を数えるため）
+
+### PWA
+
+- `src/app/manifest.ts`、`src/app/apple-icon.png`・`src/app/icon.svg`（Next.js が head に出す）、`public/icon-192.png`・`public/icon-512.png`
+- アイコンは `scripts/icon.svg` を直して `node scripts/make-icons.mjs` で作り直す（図柄は中心から半径 40% に収める）
+- `public/sw.js` は install と activate だけ。`fetch` を横取りしない。登録は `src/components/sw-register.tsx`（本番のみ）
+- `next.config.ts` の `headers()` で `/sw.js` を `no-store` に
 
 ### 日付と時刻
 

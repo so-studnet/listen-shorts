@@ -8,12 +8,15 @@ import { parsePackJson, type Pack, type PackIssue } from "@/lib/domain/pack";
 import {
   EMPTY_DATA,
   packUpdateKind,
+  parseBackup,
   removePack,
   upsertPack,
+  type AppData,
 } from "@/lib/domain/records";
 import { SAMPLE_PACK } from "@/lib/sample";
 import { getStore, useAppData } from "@/lib/store/use-app-data";
 import { useHydrated } from "@/lib/use-hydrated";
+import { InstallGuide } from "./install-guide";
 import { primaryBtn, secondaryBtn } from "./ui";
 
 type Pending = { pack: Pack; warnings: PackIssue[]; oldVersion: number };
@@ -261,6 +264,8 @@ function Manager() {
         </p>
       </section>
 
+      <InstallGuide />
+
       <DataSection />
     </div>
   );
@@ -269,6 +274,21 @@ function Manager() {
 function DataSection() {
   const data = useAppData();
   const [confirmWipe, setConfirmWipe] = useState(0);
+  const backupRef = useRef<HTMLInputElement>(null);
+  const [backup, setBackup] = useState<{ data: AppData; dropped: number; name: string } | null>(null);
+  const [backupMsg, setBackupMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const onBackupFile = async (file: File | undefined) => {
+    if (!file) return;
+    setBackupMsg(null);
+    const r = parseBackup(await file.text());
+    if (!r.ok) {
+      setBackup(null);
+      setBackupMsg({ ok: false, text: r.message });
+      return;
+    }
+    setBackup({ data: r.data, dropped: r.dropped, name: file.name });
+  };
   const json = JSON.stringify(data);
   const kb = Math.ceil(new Blob([json]).size / 1024);
 
@@ -298,6 +318,60 @@ function DataSection() {
       <button className={secondaryBtn} onClick={exportData}>
         ⬇️ データを書き出す（JSON）
       </button>
+      <input
+        ref={backupRef}
+        type="file"
+        accept=".json,application/json,text/plain"
+        className="hidden"
+        data-testid="backup-input"
+        onChange={(e) => {
+          void onBackupFile(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+      <button className={secondaryBtn} onClick={() => backupRef.current?.click()}>
+        ⬆️ 書き出したファイルから読み込む
+      </button>
+      {backup && (
+        <div
+          role="alertdialog"
+          aria-label="データの読み込みの確認"
+          className="flex flex-col gap-2 rounded-xl border-2 border-amber-400 p-3 text-sm"
+        >
+          <p>
+            「{backup.name}」の中身：解答 {backup.data.answers.length} 件・解いた本数{" "}
+            {backup.data.clipResults.length}・復習 {backup.data.review.length} 問・パック{" "}
+            {backup.data.packs.length} 個
+            {backup.dropped > 0 && `（壊れていた ${backup.dropped} 件は読み飛ばします）`}。
+          </p>
+          <p className="font-bold">
+            いまこの端末にあるデータは、すべてこの中身に置き換わります。
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              className={primaryBtn}
+              onClick={() => {
+                getStore().update(() => backup.data);
+                setBackupMsg({ ok: true, text: "データを読み込みました" });
+                setBackup(null);
+              }}
+            >
+              置き換える
+            </button>
+            <button className={secondaryBtn} onClick={() => setBackup(null)}>
+              やめる
+            </button>
+          </div>
+        </div>
+      )}
+      {backupMsg && (
+        <p
+          role={backupMsg.ok ? "status" : "alert"}
+          className={`rounded-xl p-3 text-sm ${backupMsg.ok ? "bg-emerald-100 dark:bg-emerald-900" : "bg-rose-100 dark:bg-rose-900"}`}
+        >
+          {backupMsg.text}
+        </p>
+      )}
       <button
         className={`h-12 w-full rounded-xl px-4 text-base font-semibold ${confirmWipe > 0 ? "bg-rose-600 text-white" : "border border-rose-300 text-rose-700 dark:border-rose-800 dark:text-rose-300"}`}
         onClick={() => {

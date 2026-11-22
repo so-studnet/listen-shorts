@@ -121,7 +121,7 @@ test("パックを貼り付けて読み込める。エラーは場所つきで�
   broken.packId = "mine";
   broken.clips[0].items[0].answer = "Alizona";
   await page.getByLabel("パックの JSON").fill(JSON.stringify(broken, null, 2));
-  await page.getByRole("button", { name: "読み込む" }).click();
+  await page.getByRole("button", { name: "読み込む", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "読み込めませんでした" })).toContainText(
     '文の中に"Alizona" が見つかりません',
   );
@@ -133,7 +133,7 @@ test("パックを貼り付けて読み込める。エラーは場所つきで�
   ok.clips = [ok.clips[2]];
   for (const item of ok.clips[0].items) item.itemId = "mine-" + item.itemId;
   await page.getByLabel("パックの JSON").fill(JSON.stringify(ok));
-  await page.getByRole("button", { name: "読み込む" }).click();
+  await page.getByRole("button", { name: "読み込む", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("「自分のパック」を読み込みました（1 本・4 問）");
   await shot(page, "06-pack-loaded");
 
@@ -170,7 +170,7 @@ test("埋め込みできない動画は説明を出し、再生ボタンを隠�
   p.clips[0].videoId = "ERRXXXXXXXX";
   for (const item of p.clips[0].items) item.itemId = "err-" + item.itemId;
   await page.getByLabel("パックの JSON").fill(JSON.stringify(p));
-  await page.getByRole("button", { name: "読み込む" }).click();
+  await page.getByRole("button", { name: "読み込む", exact: true }).click();
   await page.getByRole("link", { name: /フィード/ }).click();
 
   await expect(
@@ -193,7 +193,7 @@ async function loadOnlyClip(page: Page, clipIndex: number, packId: string) {
   for (const item of p.clips[0].items) item.itemId = `${packId}-${item.itemId}`;
   await page.goto("/settings");
   await page.getByLabel("パックの JSON").fill(JSON.stringify(p));
-  await page.getByRole("button", { name: "読み込む" }).click();
+  await page.getByRole("button", { name: "読み込む", exact: true }).click();
   await page.getByRole("link", { name: /フィード/ }).click();
 }
 

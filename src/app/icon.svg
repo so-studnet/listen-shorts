@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 背景は全面（maskable で切り抜かれても欠けない）。図柄は中心から半径 40% の安全領域に収める -->
+  <rect width="512" height="512" fill="#2a78d6"/>
+  <!-- 縦長の画面（ショート動画） -->
+  <rect x="150" y="128" width="148" height="256" rx="28" fill="#ffffff"/>
+  <!-- 再生ボタン -->
+  <path d="M200 206 L262 256 L200 306 Z" fill="#2a78d6" stroke="#2a78d6" stroke-width="14" stroke-linejoin="round"/>
+  <!-- 音の波 -->
+  <path d="M330 206 Q356 256 330 306" fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round"/>
+  <path d="M372 172 Q414 256 372 340" fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round"/>
+</svg>

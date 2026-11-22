@@ -177,3 +177,41 @@ export function removePack(data: AppData, packId: string): AppData {
     review: removePackFromQueue(data.review, packId),
   };
 }
+
+export type BackupResult =
+  | { ok: true; data: AppData; dropped: number }
+  | { ok: false; message: string };
+
+/**
+ * 書き出したファイル（設定 → データを書き出す）を読む。壊れた要素は捨て、捨てた数を返す。
+ * 別の端末・ホーム画面のアプリへデータを移すときに使う。
+ */
+export function parseBackup(text: string): BackupResult {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return { ok: false, message: "JSON として読めません。書き出したファイルをそのまま選んでください" };
+  }
+  const r = raw as Record<string, unknown> | null;
+  if (
+    !r ||
+    typeof r !== "object" ||
+    !Array.isArray(r.answers) ||
+    !Array.isArray(r.packs) ||
+    !Array.isArray(r.clipResults)
+  ) {
+    return {
+      ok: false,
+      message: "ListenShorts の書き出しファイルではありません（パックを読み込むときは、上の「パックを読み込む」を使ってください）",
+    };
+  }
+  const data = loadAppData(raw);
+  const count = (v: unknown) => (Array.isArray(v) ? v.length : 0);
+  const dropped =
+    count(r.answers) - data.answers.length +
+    count(r.packs) - data.packs.length +
+    count(r.clipResults) - data.clipResults.length +
+    count(r.review) - data.review.length;
+  return { ok: true, data, dropped };
+}

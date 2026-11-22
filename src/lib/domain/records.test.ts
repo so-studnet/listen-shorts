@@ -5,6 +5,7 @@ import {
   EMPTY_DATA,
   loadAppData,
   packUpdateKind,
+  parseBackup,
   removePack,
   totalXp,
   upsertPack,
@@ -119,5 +120,22 @@ describe("パックの置き換え", () => {
       "sample/sample-c001-q1",
       "other/sample-c001-q2",
     ]);
+  });
+});
+
+describe("parseBackup", () => {
+  it("書き出したものを読み戻せる。壊れた要素は捨てて数を返す", () => {
+    const d = { ...upsertPack(EMPTY_DATA, pack, "t"), answers: [log] };
+    const r = parseBackup(JSON.stringify({ ...d, answers: [log, { broken: true }] }, null, 2));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.packs[0].pack.packId).toBe("sample");
+    expect(r.data.answers).toHaveLength(1);
+    expect(r.dropped).toBe(1);
+  });
+  it("JSON でない・パックのファイルを選んだときは説明を返す", () => {
+    expect(parseBackup("{").ok).toBe(false);
+    const r = parseBackup(JSON.stringify(sample));
+    expect(!r.ok && r.message).toMatch(/パックを読み込む/);
   });
 });

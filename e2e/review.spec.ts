@@ -115,7 +115,7 @@ test("パックを削除すると、その問題は復習から外れる", async
   for (const item of p.clips[0].items) item.itemId = `gone-${item.itemId}`;
   await page.goto("/settings");
   await page.getByLabel("パックの JSON").fill(JSON.stringify(p));
-  await page.getByRole("button", { name: "読み込む" }).click();
+  await page.getByRole("button", { name: "読み込む", exact: true }).click();
   await page.getByRole("link", { name: /フィード/ }).click();
   await page.getByRole("button", { name: "▶ タップして再生" }).click();
   await page.getByRole("button", { name: "クイズへ進む" }).click();
