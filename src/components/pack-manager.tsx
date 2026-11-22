@@ -3,7 +3,6 @@
  * パックの読み込み（M1 は貼り付けだけの簡易版）と一覧・削除。
  * ファイル読み込み・行番号つきエラー・置き換えの確認は M6。
  */
-import Link from "next/link";
 import { useState } from "react";
 import { parsePackJson, type PackIssue } from "@/lib/domain/pack";
 import { removePack, upsertPack } from "@/lib/domain/records";
@@ -58,17 +57,7 @@ export function PackManager() {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      <nav className="flex items-center justify-between">
-        <h1 className="text-lg font-bold">パック</h1>
-        <Link
-          href="/"
-          className="flex h-12 items-center rounded-xl border border-zinc-300 px-3 text-sm dark:border-zinc-600"
-        >
-          ← クイズへ
-        </Link>
-      </nav>
-
+    <div className="flex flex-col gap-4">
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-bold">パックを貼り付けて読み込む</h2>
         <p className="text-xs text-zinc-600 dark:text-zinc-400">
@@ -139,6 +128,6 @@ export function PackManager() {
           サンプル：{SAMPLE_PACK.title}（{SAMPLE_PACK.clips.length} 本・削除できません）
         </p>
       </section>
-    </main>
+    </div>
   );
 }

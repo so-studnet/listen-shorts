@@ -29,3 +29,37 @@ export function sentenceOf(clip: Clip, sid: string): Sentence {
   if (!s) throw new Error(`sid ${sid} がありません`);
   return s;
 }
+
+export type FeedFilterInput = {
+  packId: string | null;
+  accent: string | null;
+  difficulty: number | null;
+};
+
+/** 解いたことのあるクリップの key（packId/clipId）。 */
+export function playedKeys(
+  clipResults: readonly { packId: string; clipId: string }[],
+): Set<string> {
+  return new Set(clipResults.map((r) => `${r.packId}/${r.clipId}`));
+}
+
+/**
+ * フィードの並び：絞り込んだうえで、まだ解いていないクリップ → 解いたクリップ。
+ * それぞれの中ではカタログの順（新しいパックから、パック内は順番どおり）。
+ */
+export function buildFeed(
+  catalog: readonly CatalogEntry[],
+  filter: FeedFilterInput,
+  played: ReadonlySet<string>,
+): CatalogEntry[] {
+  const hit = catalog.filter(
+    (e) =>
+      (filter.packId === null || e.pack.packId === filter.packId) &&
+      (filter.accent === null || e.clip.accent === filter.accent) &&
+      (filter.difficulty === null || e.clip.difficulty === filter.difficulty),
+  );
+  return [
+    ...hit.filter((e) => !played.has(e.key)),
+    ...hit.filter((e) => played.has(e.key)),
+  ];
+}

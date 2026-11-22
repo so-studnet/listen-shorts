@@ -41,10 +41,11 @@ describe("loadAppData", () => {
       packs: [{ importedAt: "x", pack: sample }, { pack: {} }],
       clipResults: "oops",
     });
-    expect(d.answers).toEqual([log]);
+    expect(d.answers).toEqual([{ ...log, speedBonus: 0 }]);
     expect(d.packs.length).toBe(1);
     expect(d.clipResults).toEqual([]);
-    expect(d.progress).toEqual({ combo: 0 });
+    expect(d.progress).toEqual({ combo: 0, badges: [] });
+    expect(d.feedFilter).toEqual({ packId: null, accent: null, difficulty: null });
   });
   it("M1 のクリップ結果（lifeBonus なし）は 0 として読む", () => {
     const d = loadAppData({

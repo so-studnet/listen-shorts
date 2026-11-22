@@ -6,6 +6,8 @@ import { ACCENTS, ITEM_TYPES, TAGS, packSchema } from "./pack";
 
 export const answerLogSchema = z.object({
   id: z.string(),
+  /** 1本のクリップを解いた1回の ID（clipResults の id と同じ）。M2 までの記録にはない */
+  sessionId: z.string().optional(),
   answeredAt: z.string(),
   source: z.enum(["feed", "retry", "review"]),
   packId: z.string(),
@@ -20,6 +22,8 @@ export const answerLogSchema = z.object({
   replays: z.number(),
   elapsedMs: z.number(),
   hintUsed: z.boolean(),
+  /** スピードボーナス（M2 までの記録にはないので 0） */
+  speedBonus: z.number().default(0),
   points: z.number(),
 });
 export type AnswerLog = z.infer<typeof answerLogSchema>;
@@ -50,21 +54,35 @@ export type StoredPack = z.infer<typeof storedPackSchema>;
 export const progressSchema = z.object({
   /** いまの連続正解数（クリップをまたいで続く） */
   combo: z.number().int().min(0),
+  /** 獲得したバッジ（消えない） */
+  badges: z
+    .array(z.object({ id: z.string(), earnedAt: z.string() }))
+    .default([]),
 });
 export type Progress = z.infer<typeof progressSchema>;
+
+export const feedFilterSchema = z.object({
+  packId: z.string().nullable(),
+  accent: z.enum(ACCENTS).nullable(),
+  difficulty: z.number().int().min(1).max(5).nullable(),
+});
+export type FeedFilter = z.infer<typeof feedFilterSchema>;
+export const NO_FILTER: FeedFilter = { packId: null, accent: null, difficulty: null };
 
 export type AppData = {
   packs: StoredPack[];
   answers: AnswerLog[];
   clipResults: ClipResult[];
   progress: Progress;
+  feedFilter: FeedFilter;
 };
 
 export const EMPTY_DATA: AppData = Object.freeze({
   packs: [],
   answers: [],
   clipResults: [],
-  progress: { combo: 0 },
+  progress: { combo: 0, badges: [] },
+  feedFilter: NO_FILTER,
 }) as AppData;
 
 /** 配列の要素を1つずつ検査し、壊れた要素だけ捨てる。 */
@@ -86,7 +104,11 @@ export function loadAppData(raw: unknown): AppData {
     packs: keepValid(storedPackSchema, r.packs),
     answers: keepValid(answerLogSchema, r.answers),
     clipResults: keepValid(clipResultSchema, r.clipResults),
-    progress: progressSchema.safeParse(r.progress).data ?? { combo: 0 },
+    progress: progressSchema.safeParse(r.progress).data ?? {
+      combo: 0,
+      badges: [],
+    },
+    feedFilter: feedFilterSchema.safeParse(r.feedFilter).data ?? NO_FILTER,
   };
 }
 

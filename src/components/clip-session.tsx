@@ -16,6 +16,8 @@ import {
   type QuizState,
   type QuizSummary,
 } from "@/lib/domain/quiz";
+import type { BadgeDef } from "@/lib/domain/badges";
+import { levelFromXp } from "@/lib/domain/level";
 import { comboMultiplier } from "@/lib/domain/scoring";
 import { findAnswerSpan, wordCount } from "@/lib/domain/text";
 import { useSegmentPlayer } from "@/lib/youtube/use-segment-player";
@@ -32,6 +34,16 @@ type Props = {
   onAnswer: (item: Item, result: QuestionResult) => void;
   onFinish: (summary: QuizSummary) => void;
   onNext: () => void;
+  /** クイズ中（スワイプで次へ行かせたくない間）は true */
+  onLockChange?: (locked: boolean) => void;
+  /** 解き終えたあとのご褒美（親が保存のときに計算する） */
+  rewards?: Rewards | null;
+};
+
+export type Rewards = {
+  xpBefore: number;
+  xpAfter: number;
+  badges: BadgeDef[];
 };
 
 const VERDICT_LABEL = {
@@ -76,6 +88,8 @@ export function ClipSession({
   onAnswer,
   onFinish,
   onNext,
+  onLockChange,
+  rewards,
 }: Props) {
   const [state, dispatch] = useReducer(
     quizReducer,
@@ -112,6 +126,7 @@ export function ClipSession({
   };
   const startQuiz = () => {
     player.stop();
+    onLockChange?.(state.items.length > 0);
     dispatch({
       type: "startQuiz",
       now: Date.now(),
@@ -143,6 +158,7 @@ export function ClipSession({
     dispatch(action);
     if (next.phase.kind === "result" && !finishedRef.current) {
       finishedRef.current = true;
+      onLockChange?.(false);
       onFinish(summarize(next));
     }
   };
@@ -304,6 +320,7 @@ export function ClipSession({
         <ResultView
           clip={clip}
           state={state}
+          rewards={rewards ?? null}
           onPlay={(s, e) => player.playSegment(s, e)}
           canPlay={player.ready && !player.playing}
           onNext={onNext}
@@ -366,12 +383,14 @@ function Hud({
 function ResultView({
   clip,
   state,
+  rewards,
   onPlay,
   canPlay,
   onNext,
 }: {
   clip: Clip;
   state: QuizState;
+  rewards: Rewards | null;
   onPlay: (start: number, end: number) => void;
   canPlay: boolean;
   onNext: () => void;
@@ -379,8 +398,34 @@ function ResultView({
   const s = summarize(state);
   const rate = s.total ? Math.round((s.correct / s.total) * 100) : 0;
   const misses = state.results.filter((r) => r.verdict !== "correct");
+  const lvBefore = rewards ? levelFromXp(rewards.xpBefore) : null;
+  const lvAfter = rewards ? levelFromXp(rewards.xpAfter) : null;
   return (
     <div className="flex flex-col gap-4" data-testid="result">
+      {lvBefore && lvAfter && lvAfter.level > lvBefore.level && (
+        <div
+          className="rounded-xl bg-amber-100 p-3 text-center dark:bg-amber-900"
+          data-testid="level-up"
+        >
+          <div className="text-lg font-bold">🎉 レベルアップ！ Lv {lvAfter.level}</div>
+          {lvAfter.title !== lvBefore.title && (
+            <div className="text-sm">新しい称号：{lvAfter.title}</div>
+          )}
+        </div>
+      )}
+      {rewards && rewards.badges.length > 0 && (
+        <div
+          className="flex flex-col gap-1 rounded-xl bg-emerald-100 p-3 dark:bg-emerald-900"
+          data-testid="new-badges"
+        >
+          <div className="text-sm font-bold">🏅 バッジを獲得</div>
+          {rewards.badges.map((b) => (
+            <div key={b.id} className="text-sm">
+              {b.icon} {b.name}：{b.description}
+            </div>
+          ))}
+        </div>
+      )}
       <div className="rounded-xl bg-sky-100 p-4 text-center dark:bg-sky-900">
         <div className="text-xs">獲得 XP{state.retry && "（再挑戦は半分）"}</div>
         <div className="text-3xl font-bold" data-testid="earned-xp">

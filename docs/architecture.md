@@ -1,6 +1,6 @@
 # ListenShorts 設計
 
-最終更新：2026-11-22（M2）。実装が変わったら更新する。
+最終更新：2026-11-22（M3）。実装が変わったら更新する。
 
 ## 1. 技術構成
 
@@ -26,8 +26,12 @@ src/
     page.tsx              フィード（クイズ・結果もこの中）
     review/page.tsx       復習
     stats/page.tsx        記録
-    settings/page.tsx     設定・パック管理（M3。M1 は packs/page.tsx）
-  components/             画面の部品（Player、ClozeQuestion、TabBar など）
+    settings/page.tsx     設定・パック管理
+  components/             画面の部品
+    home.tsx              フィード（縦スワイプ・絞り込み・1本ごとの保存とご褒美の計算）
+    clip-session.tsx      1本のクリップ（視聴・クイズ・結果）
+    answer-inputs.tsx     穴埋め・聞き分け・並べ替えの解答欄
+    tab-bar.tsx           下部のタブバー（layout.tsx に置く）
   lib/
     domain/               純粋関数（画面にも保存先にも依存しない）とテスト
       constants.ts        ゲームの数値（得点・コンボ・時間・ライフ・レベル曲線・復習の間隔）
@@ -129,6 +133,12 @@ interface AppStore {
 - まず `JSON.parse` 。失敗したら、エラーの位置（文字の番号）から行番号を出す
 - 次に、JSON の各値が何行目にあるかの対応表を作る（小さな自前の走査で、パス → 行番号）
 - zod のスキーマで型と範囲を確かめ、続けて文の中の `answer` の位置などの関係を確かめる。エラーのパスを対応表で行番号に直して出す
+
+### フィード
+
+- 縦の scroll-snap。スライド1枚 = 画面の高さ。スクロール位置から表示中の番号を出し、その1枚だけに `ClipSession`（YouTube のプレーヤー）を作る
+- クイズ中は外側のスクロールを `overflow: hidden` にして止める（`ClipSession` の `onLockChange`）
+- 1回のクリップには `sessionId` を振り、解答記録とクリップの結果に入れる（バッジの判定で「1本の中で」を数えるため）
 
 ### 集計はアプリ側で
 

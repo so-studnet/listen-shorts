@@ -78,7 +78,7 @@ test("サンプルのクリップ1本を穴埋めで最後まで解ける", asyn
   await expect(page.getByTestId("earned-xp")).toHaveText("+440");
   await expect(result).toContainText("あなたの答え：was（不正解）");
   await shot(page, "04-result");
-  await expect(page.getByTestId("total-points")).toHaveText("440 XP");
+  await expect(page.getByTestId("level-bar")).toContainText("440 / 500 XP");
 
   // 保存されている
   const saved = await page.evaluate(() =>
@@ -94,20 +94,25 @@ test("サンプルのクリップ1本を穴埋めで最後まで解ける", asyn
   });
   expect(saved.clipResults).toHaveLength(1);
   expect(saved.clipResults[0]).toMatchObject({ points: 440, lifeBonus: 60, livesLeft: 2, maxCombo: 2 });
-  expect(saved.progress).toEqual({ combo: 2 });
+  expect(saved.progress).toMatchObject({ combo: 2 });
 
-  // 次のクリップへ
+  // 次のクリップへ（縦にスクロール）
   await page.getByRole("button", { name: "次のクリップ ↑" }).click();
-  await expect(page.getByText("サンプル2：新しいカフェ")).toBeVisible();
+  await expect(page.getByText("クリップ 2 / 3")).toBeVisible();
+  await expect(page.getByRole("button", { name: "▶ タップして再生" })).toBeVisible();
 
-  // 再読み込みしても XP が残る
+  // 再読み込みしても XP が残る。解いたクリップは最後に回る
   await page.reload();
-  await expect(page.getByTestId("total-points")).toHaveText("440 XP");
+  await expect(page.getByTestId("level-bar")).toContainText("440 / 500 XP");
+  await expect(page.getByText("クリップ 1 / 3")).toBeVisible();
+  await expect(
+    page.getByTestId("clip-session").getByRole("heading", { name: "サンプル2：新しいカフェ" }),
+  ).toBeVisible();
 });
 
 test("パックを貼り付けて読み込める。エラーは場所つきで出る", async ({ page }) => {
   await setup(page);
-  await page.goto("/packs");
+  await page.goto("/settings");
   const sample = JSON.parse(
     readFileSync(path.join(__dirname, "../src/data/sample-pack.json"), "utf8"),
   );
@@ -132,12 +137,14 @@ test("パックを貼り付けて読み込める。エラーは場所つきで�
   await expect(page.getByRole("status")).toContainText("「自分のパック」を読み込みました（1 本・4 問）");
   await shot(page, "06-pack-loaded");
 
-  await page.getByRole("link", { name: "← クイズへ" }).click();
-  await expect(page.getByText("サンプル3：ニュースの話")).toBeVisible();
+  await page.getByRole("link", { name: /フィード/ }).click();
+  await expect(
+    page.getByTestId("clip-session").getByRole("heading", { name: "サンプル3：ニュースの話" }),
+  ).toBeVisible();
   await expect(page.getByText("クリップ 1 / 4")).toBeVisible();
 
   // 削除は2回押し
-  await page.goto("/packs");
+  await page.goto("/settings");
   await page.getByRole("button", { name: "削除" }).click();
   await page.getByRole("button", { name: "本当に削除" }).click();
   await expect(page.getByText("まだありません。")).toBeVisible();
@@ -153,7 +160,7 @@ test("動画が再生できないときは説明を出し、クイズへ進め�
 
 test("埋め込みできない動画は説明を出し、再生ボタンを隠す", async ({ page }) => {
   await setup(page);
-  await page.goto("/packs");
+  await page.goto("/settings");
   const sample = JSON.parse(
     readFileSync(path.join(__dirname, "../src/data/sample-pack.json"), "utf8"),
   );
@@ -164,7 +171,7 @@ test("埋め込みできない動画は説明を出し、再生ボタンを隠�
   for (const item of p.clips[0].items) item.itemId = "err-" + item.itemId;
   await page.getByLabel("パックの JSON").fill(JSON.stringify(p));
   await page.getByRole("button", { name: "読み込む" }).click();
-  await page.getByRole("link", { name: "← クイズへ" }).click();
+  await page.getByRole("link", { name: /フィード/ }).click();
 
   await expect(
     page.getByRole("alert").filter({ hasText: "この動画は再生できません" }),
@@ -181,18 +188,21 @@ async function loadOnlyClip(page: Page, clipIndex: number, packId: string) {
   );
   const p = structuredClone(sample);
   p.packId = packId;
+  p.title = `パック ${packId}`;
   p.clips = [p.clips[clipIndex]];
   for (const item of p.clips[0].items) item.itemId = `${packId}-${item.itemId}`;
-  await page.goto("/packs");
+  await page.goto("/settings");
   await page.getByLabel("パックの JSON").fill(JSON.stringify(p));
   await page.getByRole("button", { name: "読み込む" }).click();
-  await page.getByRole("link", { name: "← クイズへ" }).click();
+  await page.getByRole("link", { name: /フィード/ }).click();
 }
 
 test("3形式が混ざったクリップを、ヒント・ライフ・コンボを使って解ける", async ({ page }) => {
   await setup(page);
   await loadOnlyClip(page, 1, "mixed");
-  await expect(page.getByText("サンプル2：新しいカフェ")).toBeVisible();
+  await expect(
+    page.getByTestId("clip-session").getByRole("heading", { name: "サンプル2：新しいカフェ" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "▶ タップして再生" }).click();
   await page.getByRole("button", { name: "クイズへ進む" }).click();
 
@@ -261,28 +271,67 @@ test("3形式が混ざったクリップを、ヒント・ライフ・コンボ�
   expect(saved.progress.combo).toBe(0);
 });
 
-test("再挑戦は XP が半分", async ({ page }) => {
+test("ご褒美（レベルアップ・バッジ）と、再挑戦は XP が半分", async ({ page }) => {
   await setup(page);
   await loadOnlyClip(page, 0, "again");
-  for (let round = 0; round < 2; round++) {
+  const solve = async () => {
     await page.getByRole("button", { name: "▶ タップして再生" }).click();
     await page.getByRole("button", { name: "クイズへ進む" }).click();
+    await expect(page.getByTestId("feed")).toHaveAttribute("data-locked", "yes");
     for (const a of ["Arizona", "it was", "called a", "it was the"]) {
       await page.getByLabel("答え").fill(a);
       await page.getByRole("button", { name: "答える" }).click();
       await page.getByRole("button", { name: /次の問題|結果を見る/ }).click();
     }
-    if (round === 0) {
-      // 120 + 140 + 170 + 220 + 90
-      await expect(page.getByTestId("earned-xp")).toHaveText("+740");
-      // 次のクリップ（サンプル）を飛ばして同じクリップに戻る
-      await page.getByRole("button", { name: "次のクリップ ↑" }).click();
-      await page.getByRole("button", { name: "▶ タップして再生" }).click();
-      await page.getByRole("button", { name: "クイズへ進む" }).click();
-      await page.goto("/");
-      await expect(page.getByText("・再挑戦（XP 半分）")).toBeVisible();
-    }
+    await expect(page.getByTestId("feed")).toHaveAttribute("data-locked", "no");
+  };
+
+  await solve();
+  // 120 + 140 + 170 + 220 + 90
+  await expect(page.getByTestId("earned-xp")).toHaveText("+740");
+  await expect(page.getByTestId("level-up")).toContainText("レベルアップ！ Lv 2");
+  const badges = page.getByTestId("new-badges");
+  for (const name of ["初クリア", "ノーミスクリア", "ライフ温存", "パーフェクトコンボ"]) {
+    await expect(badges).toContainText(name);
   }
-  // コンボは続いている（4 → 8 連続、すべて ×2.0）：(220 × 4) / 2 + 45
+  await shot(page, "11-rewards");
+
+  // 絞り込みでこのパックだけにして、もう一度解く
+  await page.getByRole("button", { name: "絞り込み" }).click();
+  await page.getByRole("combobox", { name: "パック" }).selectOption("again");
+  await expect(page.getByRole("button", { name: "絞り込み中" })).toBeVisible();
+  await expect(page.getByText("・再挑戦（XP 半分）")).toBeVisible();
+  await shot(page, "12-filter");
+  await solve();
+  // コンボは続いている（5〜8 連続、すべて ×2.0）：(220 × 4) / 2 + 90 / 2
   await expect(page.getByTestId("earned-xp")).toHaveText("+485");
+  await expect(page.getByTestId("new-badges")).toHaveCount(0);
+
+  // 記録のタブ
+  await page.getByRole("link", { name: /記録/ }).click();
+  await expect(page.getByTestId("stats-xp")).toHaveText("1225");
+  await expect(page.locator("[data-testid=level-bar]:visible")).toContainText("Lv 2");
+  await expect(page.getByTestId("badge-first_clear")).toHaveAttribute("data-earned", "yes");
+  await expect(page.getByTestId("badge-lr_master")).toContainText("2 / 10");
+  await expect(page.getByTestId("badge-uk_10")).toContainText("1 / 10");
+  await shot(page, "13-stats");
+
+  // 絞り込みは保存されている。解除できる
+  await page.getByRole("link", { name: /フィード/ }).click();
+  await expect(page.getByRole("button", { name: "絞り込み中" })).toBeVisible();
+  // Next.js はタブを移っても前の画面の状態を残すので、絞り込みの欄が開いたままのこともある
+  const packSelect = page.getByRole("combobox", { name: "パック" });
+  if (!(await packSelect.isVisible()))
+    await page.getByRole("button", { name: "絞り込み中" }).click();
+  await packSelect.selectOption("");
+  await expect(page.getByText("クリップ 1 / 4")).toBeVisible();
+});
+
+test("視聴前はスワイプで次のクリップへ行ける", async ({ page }) => {
+  await setup(page);
+  await page.goto("/");
+  await expect(page.getByText("クリップ 1 / 3")).toBeVisible();
+  await page.getByTestId("feed").evaluate((el) => el.scrollTo(0, el.clientHeight));
+  await expect(page.getByText("クリップ 2 / 3")).toBeVisible();
+  await shot(page, "14-feed");
 });
