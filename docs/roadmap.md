@@ -24,9 +24,9 @@
 | M4 | 復習キューと復習画面 | 間違えた問題が翌日に出る | 完了（So が iPhone で確認） |
 | M5 | 記録画面（タグ別・週別・アクセント別の正答率） | 推移がグラフで見える | 完了（So が iPhone で確認） |
 | M6 | パック管理の仕上げ（ファイル読み込み、行番号つきのエラー表示、一覧・削除・置き換え） | 本物のパックを読み込める | 完了（So が iPhone で確認） |
-| M7 | PWA（マニフェスト・アイコン・Service Worker） | iPhone のホーム画面に追加して使える | 実装完了（So の確認は M8 と一緒に） |
+| M7 | PWA（マニフェスト・アイコン・Service Worker） | iPhone のホーム画面に追加して使える | 完了（So が iPhone で確認） |
 | M8 | Supabase のログインと同期、ブラウザ内データの取り込み | PC と iPhone で同じ記録が見える | 未着手 |
-| M9 | 本番の仕上げ（ログイン必須の確認、新規登録の停止、本番 URL の確認） | 本番 URL でログインして使える | **実装完了・So の確認待ち** |
+| M9 | 本番の仕上げ（ログイン必須の確認、新規登録の停止、本番 URL の確認） | 本番 URL でログインして使える | 完了（So が確認） |
 
 ### たたき台からの変更【決定】
 
@@ -176,7 +176,7 @@
 - `robots.txt` で検索エンジンを断る（ページの `noindex` と `X-Robots-Tag` も）
 - セキュリティのヘッダー：ほかのサイトへの埋め込みの禁止（`X-Frame-Options: DENY`、`frame-ancestors 'none'`）、`Referrer-Policy: strict-origin-when-cross-origin`（YouTube の埋め込みに送り元が要るため no-referrer にはしない）、使わない機能の停止（カメラ・マイク・位置情報・支払い。YouTube の再生に要る許可には触れない）
 - So が Vercel に Supabase の接続情報を入れた（2026-11-22）。Claude からは本番の URL に接続できないので、ログインと同期の確認は So に頼む（`docs/setup.md` の 6章）。確認のあと、Claude が Supabase の側で行が入ったことを確かめる
-- 【未確認】本番でのログイン・同期・Realtime、新規登録の設定（Allow new users to sign up）
+- So が公開後の確認（`docs/setup.md` の6章）をすべて済ませた（2026-11-22）。Claude が Supabase の側で、ログインしたユーザーのパックと解答が保存されていることを確かめた
 
 ## 今後の候補（対象外として残したもの）
 
