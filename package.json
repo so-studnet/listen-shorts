@@ -10,9 +10,11 @@
     "test": "vitest run",
     "typecheck": "next typegen && tsc --noEmit",
     "check": "bash scripts/check.sh",
-    "e2e": "playwright test --trace off"
+    "e2e": "playwright test --trace off",
+    "test:db": "bash scripts/test-db.sh"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.2",
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",

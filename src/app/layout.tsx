@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthGate } from "@/components/auth-gate";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 import { TabBar } from "@/components/tab-bar";
 
@@ -44,8 +45,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-dvh antialiased`}
     >
       <body className="flex h-dvh flex-col overflow-hidden">
-        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-        <TabBar />
+        <AuthGate>
+          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+          <TabBar />
+        </AuthGate>
         <ServiceWorkerRegister />
       </body>
     </html>

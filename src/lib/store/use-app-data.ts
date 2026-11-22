@@ -2,13 +2,25 @@
 
 import { useSyncExternalStore } from "react";
 import { EMPTY_DATA, type AppData } from "@/lib/domain/records";
-import { LocalStorageStore, type AppStore } from "./app-store";
+import {
+  LocalStorageStore,
+  SwitchableAppStore,
+  type AppStore,
+  type SyncStatus,
+} from "./app-store";
 
-let store: AppStore | null = null;
+let local: LocalStorageStore | null = null;
+let store: SwitchableAppStore | null = null;
 
-/** アプリ全体で1つのストア。ブラウザでだけ作る。 */
-export function getStore(): AppStore {
-  if (!store) store = new LocalStorageStore();
+/** このブラウザ内の保存先（ログイン前の保存先・取り込み元）。ブラウザでだけ作る。 */
+export function getLocalStore(): LocalStorageStore {
+  if (!local) local = new LocalStorageStore();
+  return local;
+}
+
+/** アプリ全体で1つのストア（保存先はログイン状態で切り替わる）。ブラウザでだけ作る。 */
+export function getStore(): SwitchableAppStore {
+  if (!store) store = new SwitchableAppStore(getLocalStore());
   return store;
 }
 
@@ -21,4 +33,15 @@ const serverStore: Pick<AppStore, "subscribe" | "getSnapshot" | "getServerSnapsh
 export function useAppData(): AppData {
   const s = typeof window === "undefined" ? serverStore : getStore();
   return useSyncExternalStore(s.subscribe, s.getSnapshot, s.getServerSnapshot);
+}
+
+const localStatus = (): SyncStatus => "local";
+
+export function useSyncStatus(): SyncStatus {
+  const s = typeof window === "undefined" ? null : getStore();
+  return useSyncExternalStore(
+    s ? s.subscribe : serverStore.subscribe,
+    s ? s.getStatus : localStatus,
+    localStatus,
+  );
 }

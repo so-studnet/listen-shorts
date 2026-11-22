@@ -14,7 +14,7 @@ import {
   type AppData,
 } from "@/lib/domain/records";
 import { SAMPLE_PACK } from "@/lib/sample";
-import { getStore, useAppData } from "@/lib/store/use-app-data";
+import { getStore, useAppData, useSyncStatus } from "@/lib/store/use-app-data";
 import { useHydrated } from "@/lib/use-hydrated";
 import { InstallGuide } from "./install-guide";
 import { primaryBtn, secondaryBtn } from "./ui";
@@ -31,6 +31,7 @@ export function PackManager() {
 
 function Manager() {
   const data = useAppData();
+  const local = useSyncStatus() === "local";
   const [json, setJson] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [errors, setErrors] = useState<PackIssue[]>([]);
@@ -122,7 +123,9 @@ function Manager() {
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-bold">パックを読み込む</h2>
         <p className="text-xs text-zinc-600 dark:text-zinc-400">
-          パックはこの端末のブラウザの中にだけ保存されます。
+          {local
+            ? "パックはこの端末のブラウザの中にだけ保存されます。"
+            : "パックはアカウントに保存され、ログインしたほかの端末でも使えます（本人しか読めません）。"}
         </p>
         <input
           ref={fileRef}
@@ -273,6 +276,7 @@ function Manager() {
 
 function DataSection() {
   const data = useAppData();
+  const local = useSyncStatus() === "local";
   const [confirmWipe, setConfirmWipe] = useState(0);
   const backupRef = useRef<HTMLInputElement>(null);
   const [backup, setBackup] = useState<{ data: AppData; dropped: number; name: string } | null>(null);
@@ -312,8 +316,9 @@ function DataSection() {
     <section className="flex flex-col gap-2">
       <h2 className="text-sm font-bold">データ</h2>
       <p className="text-xs text-zinc-600 dark:text-zinc-400" data-testid="data-size">
-        この端末に保存しているデータ：約 {kb} KB（解答 {data.answers.length} 件・
-        復習 {data.review.length} 問・パック {data.packs.length} 個）。ブラウザの保存の上限は約 5 MB です。
+        {local ? "この端末に保存しているデータ" : "アカウントのデータ"}：約 {kb} KB（解答 {data.answers.length} 件・
+        復習 {data.review.length} 問・パック {data.packs.length} 個）。
+        {local && "ブラウザの保存の上限は約 5 MB です。"}
       </p>
       <button className={secondaryBtn} onClick={exportData}>
         ⬇️ データを書き出す（JSON）
@@ -384,7 +389,9 @@ function DataSection() {
         }}
       >
         {confirmWipe > 0
-          ? "本当にすべて削除（元に戻せません）"
+          ? local
+            ? "本当にすべて削除（元に戻せません）"
+            : "本当にすべて削除（サーバーからも消えます）"
           : "すべてのデータを削除"}
       </button>
       {confirmWipe > 0 && (

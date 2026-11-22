@@ -1,6 +1,6 @@
 # ListenShorts 設計
 
-最終更新：2026-11-22（M7）。実装が変わったら更新する。
+最終更新：2026-11-22（M8）。実装が変わったら更新する。
 
 ## 1. 技術構成
 
@@ -160,12 +160,33 @@ interface AppStore {
 
 個人のデータ量なので、解答記録を全部読んでブラウザで集計する。週は月曜始まり、端末のタイムゾーンで区切る。
 
-## 5. M8 以降（Supabase）の予定
+## 5. Supabase（M8）
 
-詳細は M8 で決める。いまの予定は次のとおり。
+### 表（`supabase/migrations/`。作業記録アプリと同じプロジェクトなので `ls_` を付ける）
 
-- テーブル：`packs`（`user_id`、`pack_id`、`version`、`data jsonb`）、`answers`、`clip_results`、`review_entries`、`progress`
-- すべてのテーブルに `user_id` を持たせ、RLS で `user_id = auth.uid()` の行だけ読み書きできるようにする
-- ログインはメールアドレス（方式は M8 で決める）。自分のアカウントを作ったら、Supabase で新規登録を止める
-- ブラウザ内のデータを、ログイン後に1回だけ取り込む
-- 公開してよい値（Supabase の URL、Publishable key）だけを Vercel の環境変数に入れる。Secret key はアプリでは使わない
+| 表 | 主キー | 中身 |
+|---|---|---|
+| `ls_packs` | (user_id, id=packId) | パックの JSON（`data jsonb`）、読み込んだ日時 |
+| `ls_answers` | (user_id, id) | 解答の記録（F8 のとおり） |
+| `ls_clip_results` | (user_id, id=sessionId) | クリップ1本の結果 |
+| `ls_review_entries` | (user_id, id="packId/itemId") | 復習キュー |
+| `ls_progress` | user_id | コンボ・バッジ（jsonb）・フィードの絞り込み（jsonb） |
+
+- RLS：`user_id = auth.uid()` の行だけ読み書き。未ログイン（anon）は権限ごと外す。値の範囲は check 制約でも守る
+- テスト：`npm run test:db`（`scripts/test-db.sh`。一時的な PostgreSQL に Supabase の最小限 `supabase/tests/supabase-stub.sql` を作り、`supabase/tests/*.test.sql` を流す）
+- 本番への適用：Claude が Supabase の接続（MCP）の `apply_migration` で行う（So の許可）。適用済みのファイルは書き換えず、新しいファイルを足す
+
+### アプリ側
+
+```
+src/lib/supabase/client.ts   環境変数から Supabase クライアントを作る（未設定ならブラウザ内保存のまま）
+src/lib/supabase/auth.ts     ログイン状態を見て、保存先（SwitchableAppStore の中身）を切り替える
+src/lib/store/supabase-store.ts  Supabase に保存するストア
+src/lib/sync/rows.ts         AppData ⇔ 行の変換、差分、取り込み（mergeAppData）
+src/components/auth-gate.tsx ログイン画面、同期エラーの帯、取り込みの案内
+```
+
+- 環境変数：`NEXT_PUBLIC_SUPABASE_URL`・`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`（どちらも公開してよい値）。Secret key は使わない
+- 同期の流れ：画面はすぐ更新（楽観的更新）→ 差分を順番に送る（追加・更新 → 削除、500行ずつ）→ 失敗したらサーバーから読み直して戻し、状態を error に。送信中の読み直しは後回し
+- 解答の記録・クリップの結果は書いたら変えないので、差分は「ID が増えた分」だけを見る（数が多くても速い）
+- 画面のテスト：`playwright.config.ts` の `supabase` プロジェクトは、偽の接続先を入れた別のビルド（`.next-supabase-test`、ポート 3101）を使い、`e2e/fake-supabase.ts` がブラウザの通信を横取りしてメモリ上の表で応える
