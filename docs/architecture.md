@@ -1,6 +1,6 @@
 # ListenShorts 設計
 
-最終更新：2026-11-22（M4）。実装が変わったら更新する。
+最終更新：2026-11-22（M5）。実装が変わったら更新する。
 
 ## 1. 技術構成
 
@@ -12,7 +12,7 @@
 | 単体テスト | Vitest | `src/lib/domain/` の純粋関数 |
 | 画面のテスト | Playwright（`npm run e2e`） | スマホ幅（390×844、Chromium）で実際に操作して確かめる。YouTube の API は偽物に差し替える |
 | 動画 | YouTube IFrame Player API（スクリプトを読み込んで使う。npm のパッケージは使わない） | 公式の埋め込みのみ |
-| グラフ | ライブラリを使わず SVG で描く（M5） | 軽くするため |
+| グラフ | ライブラリを使わず SVG で描く | 軽くするため。色は `globals.css` の `--viz-*`（ライト・ダークそれぞれ dataviz の検証スクリプトで確認） |
 | 保存 | localStorage（M1〜）→ Supabase（M8〜） | |
 | 公開 | Vercel（M1 からプレビューで使う） | GitHub に push するだけで公開される |
 
@@ -31,6 +31,8 @@ src/
     home.tsx              フィード（縦スワイプ・絞り込み・1本ごとの保存とご褒美の計算）
     clip-session.tsx      1本のクリップ（視聴・クイズ・結果）
     review-view.tsx       復習（今日の件数、1問ずつ、まとめ）
+    stats-view.tsx        記録（レベル、正答率の推移、アクセント別、バッジ）
+    charts/               SVG のグラフ（line-chart：折れ線とツールチップ、stacked-bars：横棒）
     answer-inputs.tsx     穴埋め・聞き分け・並べ替えの解答欄
     tab-bar.tsx           下部のタブバー（layout.tsx に置く）
   lib/
