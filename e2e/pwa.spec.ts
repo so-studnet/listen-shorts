@@ -100,3 +100,15 @@ test("書き出したファイルから読み込むと、記録が戻る（Safar
   await expect(page.getByTestId("data-size")).toContainText("パック 1 個");
   await expect(page.getByTestId("pack-mine")).toBeVisible();
 });
+
+test("本番の仕上げ：検索エンジンを断り、セキュリティのヘッダーが付く", async ({ request }) => {
+  const robots = await request.get("/robots.txt");
+  expect(await robots.text()).toMatch(/Disallow: \//);
+  const res = await request.get("/");
+  const h = res.headers();
+  expect(h["x-frame-options"]).toBe("DENY");
+  expect(h["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(h["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+  expect(h["permissions-policy"]).not.toMatch(/autoplay|encrypted-media/);
+  expect(h["x-robots-tag"]).toContain("noindex");
+});
