@@ -39,8 +39,9 @@ test("サンプルのクリップ1本を穴埋めで最後まで解ける", asyn
 
   // 問題1：正解
   await expect(page.getByText("問題 1 / 4")).toBeVisible();
-  await page.getByRole("button", { name: "🔁 文を聞く（❤️1）" }).click();
-  await expect(page.getByLabel("ライフ 2")).toBeVisible();
+  // 文の聞き直しは、各問題の初回は無料。2回目からライフ1
+  await page.getByRole("button", { name: "🔁 文を聞く（無料）" }).click();
+  await expect(page.getByLabel("ライフ 3")).toBeVisible();
   await expect(page.getByRole("button", { name: "🔁 文を聞く（❤️1）" })).toBeEnabled();
   await page.getByLabel("答え").fill("arizona");
   await shot(page, "02-question");
@@ -74,11 +75,11 @@ test("サンプルのクリップ1本を穴埋めで最後まで解ける", asyn
 
   const result = page.getByTestId("result");
   await expect(result).toContainText("75%");
-  // 120 + 0 + 120 + 140 + 残りライフ 2 × 30
-  await expect(page.getByTestId("earned-xp")).toHaveText("+440");
+  // 120 + 0 + 120 + 140 + 残りライフ 3 × 30
+  await expect(page.getByTestId("earned-xp")).toHaveText("+470");
   await expect(result).toContainText("あなたの答え：was（不正解）");
   await shot(page, "04-result");
-  await expect(page.getByTestId("level-bar")).toContainText("440 / 500 XP");
+  await expect(page.getByTestId("level-bar")).toContainText("470 / 500 XP");
 
   // 保存されている
   const saved = await page.evaluate(() =>
@@ -93,7 +94,7 @@ test("サンプルのクリップ1本を穴埋めで最後まで解ける", asyn
     tags: ["l_r"],
   });
   expect(saved.clipResults).toHaveLength(1);
-  expect(saved.clipResults[0]).toMatchObject({ points: 440, lifeBonus: 60, livesLeft: 2, maxCombo: 2 });
+  expect(saved.clipResults[0]).toMatchObject({ points: 470, lifeBonus: 90, livesLeft: 3, maxCombo: 2 });
   expect(saved.progress).toMatchObject({ combo: 2 });
 
   // 次のクリップへ（縦にスクロール）
@@ -103,7 +104,7 @@ test("サンプルのクリップ1本を穴埋めで最後まで解ける", asyn
 
   // 再読み込みしても XP が残る。解いたクリップは最後に回る
   await page.reload();
-  await expect(page.getByTestId("level-bar")).toContainText("440 / 500 XP");
+  await expect(page.getByTestId("level-bar")).toContainText("470 / 500 XP");
   await expect(page.getByText("クリップ 1 / 3")).toBeVisible();
   await expect(
     page.getByTestId("clip-session").getByRole("heading", { name: "サンプル2：新しいカフェ" }),
@@ -242,10 +243,12 @@ test("3形式が混ざったクリップを、ヒント・ライフ・コンボ�
   await expect(page.getByTestId("combo")).toHaveText("🔥 3 連続（×1.5）");
   await page.getByRole("button", { name: "次の問題" }).click();
 
-  // 問題4（穴埋め）：全体の見直しでライフ2、文の聞き直しでライフ1。0 になったら押せない
+  // 問題4（穴埋め）：全体の見直しでライフ2。文の聞き直しは初回が無料、2回目でライフ1。0 になったら押せない
   await page.getByRole("button", { name: "📺 全体（❤️2）" }).click();
   await expect(page.getByLabel("ライフ 1")).toBeVisible();
   await expect(page.getByRole("button", { name: "📺 全体（❤️2）" })).toBeDisabled();
+  await page.getByRole("button", { name: "🔁 文を聞く（無料）" }).click();
+  await expect(page.getByLabel("ライフ 1")).toBeVisible();
   await expect(page.getByRole("button", { name: "🔁 文を聞く（❤️1）" })).toBeEnabled();
   await page.getByRole("button", { name: "🔁 文を聞く（❤️1）" }).click();
   await expect(page.getByLabel("ライフ 0")).toBeVisible();
@@ -266,7 +269,7 @@ test("3形式が混ざったクリップを、ヒント・ライフ・コンボ�
     ["cloze", true, 0],
     ["choice", false, 0],
     ["order", false, 0],
-    ["cloze", false, 2],
+    ["cloze", false, 3],
   ]);
   expect(saved.progress.combo).toBe(0);
 });

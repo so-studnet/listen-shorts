@@ -4,6 +4,7 @@ import {
   activeElapsedMs,
   initQuiz,
   judgeItem,
+  sentenceReplayCost,
   quizReducer,
   summarize,
   type QuizAction,
@@ -81,19 +82,51 @@ describe("startQuiz", () => {
 });
 
 describe("ライフと聞き直し", () => {
-  it("文の聞き直しで1、全体の見直しで2を使う。足りなければできない", () => {
+  it("文の聞き直しは各問題の初回が無料、2回目から1。全体の見直しは2。足りなければできない", () => {
     let s = started();
     expect(s.lives).toBe(3);
+    expect(sentenceReplayCost(s)).toBe(0);
     s = run(s, { type: "replaySentence", now: 100 });
-    expect(s.lives).toBe(2);
+    expect(s.lives).toBe(3);
     // 再生中は次の聞き直しを受け付けない
-    expect(run(s, { type: "replaySentence", now: 200 }).lives).toBe(2);
-    s = run(s, { type: "playbackEnded", now: 3100 }, { type: "replayWhole", now: 4000 });
+    expect(run(s, { type: "replaySentence", now: 200 }).phase).toBe(s.phase);
+    s = run(s, { type: "playbackEnded", now: 3100 });
+    expect(sentenceReplayCost(s)).toBe(1);
+    s = run(s, { type: "replaySentence", now: 3200 }, { type: "playbackEnded", now: 6000 });
+    expect(s.lives).toBe(2);
+    s = run(s, { type: "replayWhole", now: 7000 }, { type: "playbackEnded", now: 9000 });
     expect(s.lives).toBe(0);
-    s = run(s, { type: "playbackEnded", now: 9000 });
     expect(run(s, { type: "replaySentence", now: 9500 })).toBe(s);
     if (s.phase.kind !== "question") throw new Error();
-    expect(s.phase.replays).toBe(2);
+    expect(s.phase.replays).toBe(3);
+    expect(s.phase.sentenceReplays).toBe(2);
+  });
+
+  it("全体の見直しは、文の初回の無料に数えない", () => {
+    let s = run(started(), { type: "replayWhole", now: 0 }, { type: "playbackEnded", now: 100 });
+    expect(s.lives).toBe(1);
+    expect(sentenceReplayCost(s)).toBe(0);
+    s = run(s, { type: "replaySentence", now: 200 });
+    expect(s.lives).toBe(1);
+  });
+
+  it("次の問題に進むと、また初回は無料。ライフが0でも無料の1回は聞ける", () => {
+    let s = run(
+      started(),
+      { type: "replayWhole", now: 0 },
+      { type: "playbackEnded", now: 10 },
+      { type: "replaySentence", now: 20 },
+      { type: "playbackEnded", now: 30 },
+      { type: "replaySentence", now: 40 },
+      { type: "playbackEnded", now: 50 },
+    );
+    expect(s.lives).toBe(0);
+    s = run(s, { type: "submit", input: "was", now: 60 }, { type: "next", now: 70 });
+    expect(sentenceReplayCost(s)).toBe(0);
+    s = run(s, { type: "replaySentence", now: 80 });
+    if (s.phase.kind !== "question") throw new Error();
+    expect(s.phase.playbackStartedAt).toBe(80);
+    expect(s.lives).toBe(0);
   });
 
   it("聞き直しの再生中は経過時間に数えない", () => {
@@ -149,9 +182,9 @@ describe("得点とコンボ", () => {
       close: 0,
       wrong: 1,
       questionPoints: 230,
-      lifeBonus: 60,
-      points: 290,
-      livesLeft: 2,
+      lifeBonus: 90,
+      points: 320,
+      livesLeft: 3,
       maxCombo: 3,
     });
   });

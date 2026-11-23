@@ -23,6 +23,8 @@ export const SPEED_BONUS = {
 
 export const LIVES = {
   perClip: 3,
+  /** 各問題で、文の聞き直しを無料でできる回数（それ以降は sentenceReplayCost） */
+  freeSentenceReplays: 1,
   sentenceReplayCost: 1,
   fullReplayCost: 2,
   pointsPerRemainingLife: 30,

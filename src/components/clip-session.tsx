@@ -11,6 +11,7 @@ import {
   activeElapsedMs,
   initQuiz,
   quizReducer,
+  sentenceReplayCost,
   summarize,
   type QuestionResult,
   type QuizState,
@@ -163,6 +164,8 @@ export function ClipSession({
     }
   };
 
+  // 文の聞き直しは、各問題の初回は無料
+  const sentenceCost = sentenceReplayCost(state);
   const canReplay = (cost: number) =>
     player.ready && !player.playing && state.lives >= cost;
 
@@ -261,9 +264,9 @@ export function ClipSession({
               type="button"
               className={`${secondaryBtn} text-sm`}
               onClick={replaySentence}
-              disabled={!canReplay(LIVES.sentenceReplayCost)}
+              disabled={!canReplay(sentenceCost)}
             >
-              🔁 文を聞く（❤️{LIVES.sentenceReplayCost}）
+              🔁 文を聞く（{sentenceCost === 0 ? "無料" : `❤️${sentenceCost}`}）
             </button>
             <button
               type="button"

@@ -28,7 +28,10 @@ export type QuizPhase =
   | {
       kind: "question";
       shownAt: number;
+      /** 聞き直しの回数（文・全体の合計） */
       replays: number;
+      /** 文の聞き直しの回数（初回の無料の判定に使う） */
+      sentenceReplays: number;
       hintUsed: boolean;
       /** 聞き直しの再生で止めていた時間の合計 */
       pausedMs: number;
@@ -109,6 +112,7 @@ function newQuestion(now: number): QuizPhase {
     kind: "question",
     shownAt: now,
     replays: 0,
+    sentenceReplays: 0,
     hintUsed: false,
     pausedMs: 0,
     playbackStartedAt: null,
@@ -125,7 +129,24 @@ export function activeElapsedMs(
   return Math.max(0, now - phase.shownAt - phase.pausedMs - playing);
 }
 
-function replay(state: QuizState, cost: number, now: number): QuizState {
+/**
+ * いまの問題で「文を聞く」を押したときに使うライフ。
+ * 各問題で最初の LIVES.freeSentenceReplays 回は無料、それ以降は LIVES.sentenceReplayCost。
+ */
+export function sentenceReplayCost(state: QuizState): number {
+  const { phase } = state;
+  if (phase.kind !== "question") return LIVES.sentenceReplayCost;
+  return phase.sentenceReplays < LIVES.freeSentenceReplays
+    ? 0
+    : LIVES.sentenceReplayCost;
+}
+
+function replay(
+  state: QuizState,
+  cost: number,
+  now: number,
+  kind: "sentence" | "whole",
+): QuizState {
   const { phase } = state;
   if (phase.kind !== "question" || phase.playbackStartedAt !== null)
     return state;
@@ -133,7 +154,12 @@ function replay(state: QuizState, cost: number, now: number): QuizState {
   return {
     ...state,
     lives: state.lives - cost,
-    phase: { ...phase, replays: phase.replays + 1, playbackStartedAt: now },
+    phase: {
+      ...phase,
+      replays: phase.replays + 1,
+      sentenceReplays: phase.sentenceReplays + (kind === "sentence" ? 1 : 0),
+      playbackStartedAt: now,
+    },
   };
 }
 
@@ -165,10 +191,10 @@ export function quizReducer(state: QuizState, action: QuizAction): QuizState {
     }
 
     case "replaySentence":
-      return replay(state, LIVES.sentenceReplayCost, action.now);
+      return replay(state, sentenceReplayCost(state), action.now, "sentence");
 
     case "replayWhole":
-      return replay(state, LIVES.fullReplayCost, action.now);
+      return replay(state, LIVES.fullReplayCost, action.now, "whole");
 
     case "playbackEnded": {
       if (phase.kind !== "question" || phase.playbackStartedAt === null)
