@@ -8,6 +8,16 @@ import { useMemo, useRef, useState } from "react";
 import { newBadges } from "@/lib/domain/badges";
 import { applyAnswer } from "@/lib/domain/review";
 import {
+  isUsable,
+  restoreQuiz,
+  toSaved,
+  type SavedQuiz,
+  type SessionInfo,
+} from "@/lib/domain/resume";
+import type { QuizState } from "@/lib/domain/quiz";
+import { clearResume, readResume, writeResume } from "@/lib/store/resume-storage";
+import { useAuth } from "@/lib/supabase/use-auth";
+import {
   buildCatalog,
   buildFeed,
   playedKeys,
@@ -39,22 +49,53 @@ export function Home() {
   return <Feed />;
 }
 
+type Resume = { saved: SavedQuiz; state: QuizState; key: string };
+
 function Feed() {
   const data = useAppData();
+  const auth = useAuth();
+  const owner = auth.status === "signed-in" ? auth.userId : "local";
   const catalog = useMemo(
     () => buildCatalog(data.packs, SAMPLE_PACK),
     [data.packs],
   );
+  // 途中で閉じたクイズ（開いたときに1回だけ読む）
+  const [saved, setSaved] = useState<SavedQuiz | null>(() => {
+    const s = readResume();
+    return s && isUsable(s, owner, new Date()) ? s : null;
+  });
+  // 再開するクリップは、このフィードを開いている間ずっと先頭に置く（解き終えても並びを変えない）
+  const [pinnedKey, setPinnedKey] = useState<string | null>(null);
+  // 開いた時刻（再開した問題の残り時間をここから数える）
+  const [openedAt] = useState(() => Date.now());
+  const resume = useMemo((): Resume | null => {
+    if (!saved) return null;
+    const key = `${saved.packId}/${saved.clipId}`;
+    // ログイン直後はパックがまだ届いていないことがあるので、見つかるまで待つ
+    const entry = catalog.find((e) => e.key === key);
+    if (!entry) return null;
+    const state = restoreQuiz(saved, entry.clip, openedAt);
+    return state ? { saved, state, key } : null;
+  }, [saved, catalog, openedAt]);
+  // パックが置き換わって戻せなかった途中経過は捨てる
+  const savedKey = saved ? `${saved.packId}/${saved.clipId}` : null;
+  const savedEntryExists = savedKey !== null && catalog.some((e) => e.key === savedKey);
+  if (saved && savedEntryExists && !resume) {
+    clearResume();
+    setSaved(null);
+  }
+  if (resume && pinnedKey !== resume.key) setPinnedKey(resume.key);
   // 並び順を決めるときの「解いたクリップ」。解き終えた瞬間に並びが変わらないよう、
   // 開いたときと絞り込みを変えたときだけ取り直す
   const [playedAtOpen, setPlayedAtOpen] = useState(() =>
     playedKeys(data.clipResults),
   );
   const filter = data.feedFilter;
-  const feed = useMemo(
-    () => buildFeed(catalog, filter, playedAtOpen),
-    [catalog, filter, playedAtOpen],
-  );
+  const feed = useMemo(() => {
+    const list = buildFeed(catalog, filter, playedAtOpen);
+    const pinned = pinnedKey ? catalog.find((e) => e.key === pinnedKey) : undefined;
+    return pinned ? [pinned, ...list.filter((e) => e.key !== pinned.key)] : list;
+  }, [catalog, filter, playedAtOpen, pinnedKey]);
   const playedNow = playedKeys(data.clipResults);
 
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -134,6 +175,9 @@ function Feed() {
                   entry={entry}
                   played={playedNow.has(entry.key)}
                   position={`${i + 1} / ${feed.length}`}
+                  owner={owner}
+                  resume={resume && resume.key === entry.key ? resume : null}
+                  onResumeDone={() => setSaved(null)}
                   onLockChange={setLocked}
                   onNext={() => goTo(i + 1)}
                 />
@@ -265,21 +309,53 @@ function SessionHost({
   entry,
   played,
   position,
+  owner,
+  resume,
+  onResumeDone,
   onLockChange,
   onNext,
 }: {
   entry: CatalogEntry;
   played: boolean;
   position: string;
+  owner: string;
+  /** 途中から再開するときの、保存されていた途中経過 */
+  resume: Resume | null;
+  /** 途中経過を使い終えた（または使わなくなった）とき */
+  onResumeDone: () => void;
   onLockChange: (locked: boolean) => void;
   onNext: () => void;
 }) {
-  const [source] = useState<"feed" | "retry">(played ? "retry" : "feed");
+  // 途中から再開するときは、開いたときの情報（どの回か・初回か・XP）を引き継ぐ
+  const [resumed] = useState(resume);
+  const [source] = useState<"feed" | "retry">(
+    resumed ? resumed.saved.source : played ? "retry" : "feed",
+  );
   const [initialCombo] = useState(() => getStore().getSnapshot().progress.combo);
-  const [sessionId] = useState(() => newId());
+  const [sessionId] = useState(() => resumed?.saved.sessionId ?? newId());
   // レベルアップの判定に使う、クリップを開いた時点の XP（解答ごとに得点が保存されるため）
-  const [xpAtOpen] = useState(() => totalXp(getStore().getSnapshot()));
+  const [xpAtOpen] = useState(
+    () => resumed?.saved.xpAtOpen ?? totalXp(getStore().getSnapshot()),
+  );
   const [rewards, setRewards] = useState<Rewards | null>(null);
+
+  const info: SessionInfo = {
+    owner,
+    packId: entry.pack.packId,
+    clipId: entry.clip.clipId,
+    sessionId,
+    source,
+    xpAtOpen,
+  };
+  /** 解いている途中の状態を、この端末に保存する（閉じても続きから解けるように） */
+  const onStateChange = (state: QuizState) => {
+    if (state.phase.kind === "result") return; // 解き終えたら onFinish で消す
+    const s = toSaved(state, info, new Date());
+    if (!s) return;
+    writeResume(s);
+    // 別のクリップでクイズを始めたら、前の途中経過は使わない（あとから割り込ませない）
+    if (!resumed) onResumeDone();
+  };
 
   const onAnswer = (item: Item, r: QuestionResult) => {
     const now = new Date();
@@ -324,6 +400,8 @@ function SessionHost({
   };
 
   const onFinish = (s: QuizSummary) => {
+    clearResume();
+    if (resumed) onResumeDone();
     let got: Rewards | null = null;
     const now = new Date().toISOString();
     getStore().update((d) => {
@@ -368,6 +446,14 @@ function SessionHost({
         クリップ {position}
         {source === "retry" && "・再挑戦（XP 半分）"}
       </p>
+      {resumed && (
+        <p
+          className="rounded-xl bg-sky-50 p-2 text-xs dark:bg-sky-950"
+          data-testid="resumed"
+        >
+          前回の続き（問題 {resumed.state.index + 1} / {resumed.state.items.length}）から再開しました
+        </p>
+      )}
       <ClipSession
         pack={entry.pack}
         clip={entry.clip}
@@ -378,6 +464,8 @@ function SessionHost({
         onNext={onNext}
         onLockChange={onLockChange}
         rewards={rewards}
+        initialState={resumed?.state}
+        onStateChange={onStateChange}
       />
     </div>
   );

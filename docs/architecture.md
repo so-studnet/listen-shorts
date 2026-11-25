@@ -51,6 +51,7 @@ src/
       text.ts             文の語への分割、answer の位置、ヒント
       records.ts          保存データ（AppData）の形と読み込み
       catalog.ts          出題するクリップの並び
+      resume.ts           途中で閉じたクイズの保存の形と、再開（問題の並びが合わなければ捨てる）
     store/                保存先（インターフェースと localStorage 実装、後で Supabase 実装）
     youtube/              IFrame Player API の読み込みと区間再生
   data/
@@ -92,7 +93,7 @@ type ReviewEntry = {
 ```
 
 - XP・レベル・バッジは、`answers` と `clipResults` から計算し直せるようにしておく。保存している `xp` と `badges` は表示を速くするための写し（M8 の同期で食い違ったら計算し直す）
-- 進行中のクイズ（何問目か、ライフの残り）は保存しない。途中で閉じたら、そのクリップは最初からやり直し【Claude 決定】。解答済みの問題の記録は残る
+- 進行中のクイズ（何問目か、それまでの結果、ライフなど）は、`listen-shorts:v1:resume` に1つだけ保存する（端末ごと。同期しない）。`src/lib/domain/resume.ts` の `toSaved` / `restoreQuiz` で保存の形と戻しを行い、`src/lib/store/resume-storage.ts` で読み書きする。フィードは開いたときに読み、そのクリップを先頭に固定して `ClipSession` に戻した状態を渡す
 
 ### localStorage のキー
 

@@ -39,6 +39,10 @@ type Props = {
   onLockChange?: (locked: boolean) => void;
   /** 解き終えたあとのご褒美（親が保存のときに計算する） */
   rewards?: Rewards | null;
+  /** 途中から再開するときの状態（なければ視聴から始める） */
+  initialState?: QuizState;
+  /** 状態が変わるたびに呼ぶ（途中経過の保存に使う） */
+  onStateChange?: (state: QuizState) => void;
 };
 
 export type Rewards = {
@@ -91,12 +95,28 @@ export function ClipSession({
   onNext,
   onLockChange,
   rewards,
+  initialState,
+  onStateChange,
 }: Props) {
   const [state, dispatch] = useReducer(
     quizReducer,
     clip,
-    (c): QuizState => initQuiz(c, { combo: initialCombo, retry }),
+    (c): QuizState => initialState ?? initQuiz(c, { combo: initialCombo, retry }),
   );
+  const onStateChangeRef = useRef(onStateChange);
+  useEffect(() => {
+    onStateChangeRef.current = onStateChange;
+  });
+  useEffect(() => {
+    onStateChangeRef.current?.(state);
+  }, [state]);
+  // 途中から再開したときは、最初からクイズ中なのでスワイプを止める
+  const resumedRef = useRef(initialState !== undefined);
+  useEffect(() => {
+    if (resumedRef.current) onLockChange?.(true);
+    // 最初の1回だけ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [watched, setWatched] = useState(false);
   const [started, setStarted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);

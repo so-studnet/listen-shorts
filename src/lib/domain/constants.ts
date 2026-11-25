@@ -62,3 +62,6 @@ export const DAY_BOUNDARY_HOUR = 4;
 
 /** 区間再生の終わりに足す余白（秒）。 */
 export const PLAYBACK_TAIL_PADDING = 0.3;
+
+/** 途中で閉じたクイズを、開き直したときに続きから再開できる期間（日）。 */
+export const RESUME_MAX_AGE_DAYS = 7;
